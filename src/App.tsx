@@ -7,7 +7,16 @@ import { ReactQueryDevtools } from '@tanstack/react-query-devtools'
 import CommodityDashboard from './pages/commodity_dashboard';
 import OilPage from './pages/oil_page';
 
-const queryClient = new QueryClient();
+const queryClient = new QueryClient({
+  defaultOptions: {
+    queries: {
+      staleTime: 5*60*1000, // 5 mins
+      gcTime: 10*60*1000, // garbage-collection 10 mins
+      retry: false,
+      refetchOnWindowFocus: false,
+    }
+  }
+});
 
 function App() {
   return (
@@ -17,7 +26,7 @@ function App() {
           <Layout>
             <Routes>
               <Route path='/' element={<CommodityDashboard/>}/>
-              <Route path='/oil/:symbol' element={<OilPage/>}/>
+              <Route path='/:symbol' element={<OilPage/>}/>
             </Routes>
           </Layout>
         </ThemeProvider>
