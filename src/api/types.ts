@@ -1,16 +1,11 @@
-export interface PredictionsResult {
-    0:number;
-    1:number;
-    2:number;
-    3:number;
-    4:number;
-}
-
 export interface ForecastingData {
     Symbol:string;
     Name:string;
     Current_Date:string;
-    Predictions:PredictionsResult;
+    Predictions:Array<{
+        dt: string;
+        value: number;
+    }>;
     API_Gravity:number;
     Commodity:string;
     Grade:string;
