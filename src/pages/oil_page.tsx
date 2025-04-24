@@ -1,4 +1,4 @@
-import { useNavigate, useParams} from "react-router-dom";
+import { useParams} from "react-router-dom";
 import { useForecastingQuery } from "@/hooks/use-forecasting";
 import { Skeleton } from "@/components/ui/skeleton"
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
@@ -12,7 +12,6 @@ import {
 const OilPage = () => {
   const { symbol } = useParams<{ symbol: string }>();
   const { data, isLoading, isError, error } = useForecastingQuery(symbol || "");
-  const navigate = useNavigate();
 
   if (isLoading) return <Skeleton className="w-[100px] h-[20px] rounded-full" />;
   if (isError)   return (
