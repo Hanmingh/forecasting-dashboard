@@ -60,7 +60,7 @@ const Prediction = ({data}: PredictionChart) => {
                             <Line
                                 type="monotone"
                                 dataKey="Price"
-                                stroke="#2563eb"
+                                stroke="#ff7414"
                                 strokeWidth={2}
                                 dot={true}
                             />

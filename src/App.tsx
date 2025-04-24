@@ -22,7 +22,7 @@ function App() {
   return (
     <QueryClientProvider client={queryClient}>
       <BrowserRouter>
-        <ThemeProvider defaultTheme='dark'>
+        <ThemeProvider defaultTheme='light'>
           <Layout>
             <Routes>
               <Route path='/' element={<CommodityDashboard/>}/>
