@@ -16,7 +16,7 @@ const Prediction = ({data}: PredictionChart) => {
     return (
         <Card className="flex-1">
             <CardHeader>
-                <CardTitle>Prediction</CardTitle>
+                <CardTitle>Price Prediction ($/MT)</CardTitle>
             </CardHeader>
             <CardContent>
                 <div className="h-[200px] w-full">
@@ -38,7 +38,7 @@ const Prediction = ({data}: PredictionChart) => {
                                     (dataMin: number) => dataMin,
                                     (dataMax: number) => dataMax
                                 ]}
-                                tickFormatter={(value) => `${value} $/MT`}
+                                tickFormatter={(value) => `${value}`}
                             />
                             <Tooltip
                                 content={({ active, payload}) => {

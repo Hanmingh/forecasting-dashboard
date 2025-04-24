@@ -26,6 +26,7 @@ const OilPage = () => {
       <h1 className="text-2xl font-bold">
         {data.Name} ({data.Symbol})
       </h1>
+      
       <Prediction data={data} />
     </div>
   )
