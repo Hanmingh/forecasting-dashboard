@@ -1,13 +1,4 @@
-import { useAllForecastingsQuery } from "@/hooks/use-forecasting";
 import { ForecastingData } from "@/api/types";
-import { Skeleton } from "@/components/ui/skeleton"
-import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
-import {
-  Card,
-  CardContent,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card"
 import {
   Table,
   TableBody,
@@ -15,11 +6,20 @@ import {
   TableHead,
   TableHeader,
   TableRow,
-} from "@/components/ui/table"
+} from "@/components/ui/table";
+import {
+  Card,
+  CardContent,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
+import { useAllForecastingsQuery } from "@/hooks/use-forecasting";
+import { Skeleton } from "@/components/ui/skeleton";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Terminal } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 
-const CommodityDashboard = () => {
+const ForecastPage = () => {
   const { data, isLoading, isError, error } = useAllForecastingsQuery();
   const navigate = useNavigate();
 
@@ -36,15 +36,6 @@ const CommodityDashboard = () => {
 
   return (
     <div className="space-y-4">
-      <Card>
-        <CardHeader>
-          <CardTitle>Favorite</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <p>New Function Coming soon ...</p>
-        </CardContent>
-      </Card>
-
       <Card className="flex-1">
         <CardHeader>
           <CardTitle>Fuel Product Lists</CardTitle>
@@ -86,4 +77,4 @@ const CommodityDashboard = () => {
   )
 }
 
-export default CommodityDashboard
+export default ForecastPage

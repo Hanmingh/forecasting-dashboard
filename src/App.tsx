@@ -4,8 +4,12 @@ import Layout from './components/layout';
 import { ThemeProvider } from './components/ui/theme-provider';
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { ReactQueryDevtools } from '@tanstack/react-query-devtools'
-import CommodityDashboard from './pages/commodity_dashboard';
+import Homepage from './pages/homepage';
 import OilPage from './pages/oil_page';
+import ForecastPage from './pages/forecast_page';
+import HistoryPage from './pages/history_page';
+import InboxPage from './pages/Inbox_page';
+import SettingPage from './pages/setting_page';
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -26,8 +30,12 @@ function App() {
         <ThemeProvider defaultTheme='light'>
           <Layout>
             <Routes>
-              <Route path='/' element={<CommodityDashboard/>}/>
+              <Route path='/' element={<Homepage/>}/>
               <Route path='/:symbol' element={<OilPage/>}/>
+              <Route path="/forecast_page" element={<ForecastPage/>} />
+              <Route path="/history_page" element={<HistoryPage/>} />
+              <Route path="/Inbox_page" element={<InboxPage/>} />
+              <Route path="/setting_page" element={<SettingPage/>} />
             </Routes>
           </Layout>
         </ThemeProvider>
