@@ -8,6 +8,7 @@ import {
   Card,
   CardContent,
 } from "@/components/ui/card"
+import Layout from "@/components/layout";
 
 const OilPage = () => {
   const { symbol } = useParams<{ symbol: string }>();
@@ -26,24 +27,26 @@ const OilPage = () => {
   if (!data) return <div>Commodity Unfound!</div>;
 
   return (
-    <div className="grid gap-6">
-      <h1 className="text-2xl font-bold">
-        {data.Name} ({data.Symbol})
-      </h1>
-      <Card>
-        <CardContent className="grid grid-cols-1 sm:grid-cols-2 gap-6">
-            {Object.entries(data)
-              .filter(([key]) => key !== "Predictions" && key !== "Current_Date")
-              .map(([key, value]) => (
-                <div key={key} className="flex justify-between">
-                  <span className="font-medium">{key}</span>
-                  <span>{String(value)}</span>
-                </div>
-              ))}
-        </CardContent>
-      </Card>
-      <Prediction data={data} />
-    </div>
+    <Layout>
+      <div className="grid gap-6">
+        <h1 className="text-2xl font-bold">
+          {data.Name} ({data.Symbol})
+        </h1>
+        <Card>
+          <CardContent className="grid grid-cols-1 sm:grid-cols-2 gap-6">
+              {Object.entries(data)
+                .filter(([key]) => key !== "Predictions" && key !== "Current_Date")
+                .map(([key, value]) => (
+                  <div key={key} className="flex justify-between">
+                    <span className="font-medium">{key}</span>
+                    <span>{String(value)}</span>
+                  </div>
+                ))}
+          </CardContent>
+        </Card>
+        <Prediction data={data} />
+      </div>
+    </Layout>
   )
 }
 

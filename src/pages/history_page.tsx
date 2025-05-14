@@ -1,6 +1,8 @@
+import Layout from "@/components/layout"
+
 const HistoryPage = () => {
   return (
-    <div>Past_Forecasting</div>
+    <Layout>Past_Forecasting</Layout>
   )
 }
 

@@ -1,6 +1,8 @@
+import Layout from "@/components/layout"
+
 const InboxPage = () => {
   return (
-    <div>Inbox_page</div>
+    <Layout>Inbox_page</Layout>
   )
 }
 
