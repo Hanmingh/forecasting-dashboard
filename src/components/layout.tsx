@@ -1,15 +1,15 @@
-import type { PropsWithChildren } from 'react'
 import { SidebarProvider, SidebarTrigger } from './ui/sidebar'
 import { AppSidebar } from "@/components/ui/app-sidebar"
+import { Outlet } from 'react-router-dom'
 
-const Layout = ( {children}: PropsWithChildren ) => {
+const Layout = () => {
   return (
     <div className='bg-gradient-to-br from-background to-muted'>
         <SidebarProvider>
           <AppSidebar />
           <main className='min-h-screen container mx-auto px-4 py-8'>
             <SidebarTrigger />
-            {children}
+            <Outlet />
           </main>
         </SidebarProvider>
         <footer className='border-t backdrop-blur py-12 supports-[backdrop-filter]:bg-background/60'>

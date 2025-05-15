@@ -13,6 +13,7 @@ import InsightsPage from './pages/insights_page';
 import Login from './pages/Login';
 import Register from './pages/Register';
 import ProtectedRoute from './components/ProtectedRoute';
+import Layout from './components/layout';
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -31,16 +32,26 @@ function App() {
       <BrowserRouter>
         <ThemeProvider defaultTheme='light'>
           <Routes>
-              <Route path='/' element={<ProtectedRoute><Homepage/></ProtectedRoute>}/>
-              <Route path='/:symbol' element={<ProtectedRoute><OilPage/></ProtectedRoute>}/>
-              <Route path="/forecast" element={<ProtectedRoute><ForecastPage/></ProtectedRoute>} />
-              <Route path="/history" element={<ProtectedRoute><HistoryPage/></ProtectedRoute>} />
-              <Route path="/insights" element={<ProtectedRoute><InsightsPage/></ProtectedRoute>} />
-              <Route path="/inbox" element={<ProtectedRoute><InboxPage/></ProtectedRoute>} />
-              <Route path="/setting" element={<ProtectedRoute><SettingPage/></ProtectedRoute>} />
-              <Route path='/login' element={<Login/>}/>
-              <Route path="/register" element={<Register />} />
-            </Routes>
+            <Route path="/login"    element={<Login />} />
+            <Route path="/register" element={<Register />} />
+
+            <Route element={
+              <ProtectedRoute>
+                <Layout />
+              </ProtectedRoute>
+            }>
+              <Route path="/"        element={<Homepage />} />
+              <Route path=":symbol"  element={<OilPage />} />
+              <Route path="forecast" element={<ForecastPage />} />
+              <Route path="history"  element={<HistoryPage />} />
+              <Route path="insights" element={<InsightsPage />} />
+              <Route path="inbox"    element={<InboxPage />} />
+              <Route path="setting"  element={<SettingPage />} />
+            </Route>
+
+            {/* 404 */}
+            {/*<Route path="*" element={<NotFound />} /> */}
+          </Routes>
         </ThemeProvider>
       </BrowserRouter>
       <ReactQueryDevtools initialIsOpen={false} />
