@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -58,12 +58,12 @@ export function LoginForm({ className, ...props }: LoginFormProps) {
             <div className="grid gap-2">
               <div className="flex items-center">
                 <Label htmlFor="password">Password</Label>
-                <a
-                  href="#"
+                <Link
+                  to="#"
                   className="ml-auto text-sm underline-offset-4 hover:underline"
                 >
                   Forgot password?
-                </a>
+                </Link>
               </div>
               <Input
                 id="password"
@@ -92,9 +92,9 @@ export function LoginForm({ className, ...props }: LoginFormProps) {
           </form>
           <div className="mt-4 text-center text-sm">
             Don't have an account?{' '}
-            <a href="/register" className="underline underline-offset-4">
+            <Link to="/register" className="underline underline-offset-4">
               Sign up
-            </a>
+            </Link>
           </div>
         </CardContent>
       </Card>

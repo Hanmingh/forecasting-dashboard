@@ -14,6 +14,7 @@ import {
 import { NavUser } from "./nav-user"
 import { useQuery } from '@tanstack/react-query'
 import api from '@/api'
+import { Link } from "react-router-dom"
 
 // Menu items.
 const forecasting_items = [
@@ -86,10 +87,10 @@ export function AppSidebar() {
               {forecasting_items.map((item) => (
                 <SidebarMenuItem key={item.title}>
                   <SidebarMenuButton asChild>
-                    <a href={item.url}>
+                    <Link to={item.url}>
                       <item.icon />
                       <span>{item.title}</span>
-                    </a>
+                    </Link>
                   </SidebarMenuButton>
                 </SidebarMenuItem>
               ))}
@@ -101,10 +102,10 @@ export function AppSidebar() {
               {general_items.map((item) => (
                 <SidebarMenuItem key={item.title}>
                   <SidebarMenuButton asChild>
-                    <a href={item.url}>
+                    <Link to={item.url}>
                       <item.icon />
                       <span>{item.title}</span>
-                    </a>
+                    </Link>
                   </SidebarMenuButton>
                 </SidebarMenuItem>
               ))}
