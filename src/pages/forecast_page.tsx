@@ -1,4 +1,3 @@
-import { ForecastingData } from "@/api/types";
 import {
   Table,
   TableBody,
@@ -13,15 +12,40 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
-import { useAllForecastingsQuery } from "@/hooks/use-forecasting";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Terminal } from "lucide-react";
 import { useNavigate } from "react-router-dom";
+import { useForecast, formatPrediction } from "@/hooks/use-forecasts";
+import { TODAY } from '../components/constants';
+import { useMemo } from "react";
+import type { Forecast } from "@/hooks/types";
 
 const ForecastPage = () => {
-  const { data, isLoading, isError, error } = useAllForecastingsQuery();
+  const { data: forecasts = [], isLoading, isError, error } = useForecast({ current_date: TODAY });
   const navigate = useNavigate();
+
+  const rows = useMemo(() => {
+    const byProduct: Record<string, Forecast[]> = {}
+    forecasts.forEach((f) => {
+      if (!byProduct[f.product]) byProduct[f.product] = []
+      byProduct[f.product].push(f)
+    })
+    return Object.values(byProduct).map((group) => {
+      const map = Object.fromEntries(
+        group.map((f) => [f.n_days_ahead, f])
+      ) as Record<number, Forecast>
+      return {
+        product:        group[0].product,
+        currentValue:   group[0].current_value,
+        ahead1: formatPrediction(map[1]?.predicted_value),
+        ahead5: formatPrediction(map[5]?.predicted_value),
+        ahead10: formatPrediction(map[10]?.predicted_value),
+        ahead15: formatPrediction(map[15]?.predicted_value),
+        ahead20: formatPrediction(map[20]?.predicted_value),
+      }
+    })
+  }, [forecasts])
 
   if (isLoading) return <Skeleton className="w-[100px] h-[20px] rounded-full" />;
   if (isError)   return (
@@ -33,6 +57,9 @@ const ForecastPage = () => {
       </AlertDescription>
     </Alert>
   );
+  if (rows.length === 0) {
+    return <div>Empty Data</div>;
+  }
 
   return (
     <div className="space-y-4">
@@ -46,27 +73,29 @@ const ForecastPage = () => {
               <TableRow>
                 <TableHead>SYMBOL</TableHead>
                 <TableHead>NAME</TableHead>
-                <TableHead>COMMODITY</TableHead>
-                <TableHead>CONTRACT TYPE</TableHead>
-                <TableHead>DELIVERY METHOD</TableHead>
-                <TableHead>DELIVERY REGION</TableHead>
-                <TableHead>DENSITY</TableHead>
-                <TableHead>SHIPPING TERMS</TableHead>
-                <TableHead>SULFUR</TableHead>
+                <TableHead>TODAY'S PRICE</TableHead>
+                <TableHead>1-DAY PREDICTION</TableHead>
+                <TableHead>5-DAY PREDICTION</TableHead>
+                <TableHead>10-DAY PREDICTION</TableHead>
+                <TableHead>15-DAY PREDICTION</TableHead>
+                <TableHead>20-DAY PREDICTION</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
-              {data!.map((item: ForecastingData) => (
-                <TableRow key={item.Symbol} className="cursor-pointer" onClick={() => navigate(`/${item.Symbol}`)}>
-                  <TableCell className="font-medium">{item.Symbol}</TableCell>
-                  <TableCell>{item.Name}</TableCell>
-                  <TableCell>{item.Commodity}</TableCell>
-                  <TableCell>{item.Contract_Type}</TableCell>
-                  <TableCell>{item.Delivery_Method}</TableCell>
-                  <TableCell>{item.Delivery_Region}</TableCell>
-                  <TableCell>{item.Density}</TableCell>
-                  <TableCell>{item.Shipping_Terms}</TableCell>
-                  <TableCell>{item.Sulfur}</TableCell>
+              {rows.map((r) => (
+                <TableRow
+                  key={r.product}
+                  className="cursor-pointer"
+                  onClick={() => navigate(`/${r.product}`)}
+                >
+                  <TableCell className="font-medium">{r.product}</TableCell>
+                  <TableCell>{r.product}</TableCell>
+                  <TableCell>{r.currentValue}</TableCell>
+                  <TableCell>{r.ahead1}</TableCell>
+                  <TableCell>{r.ahead5}</TableCell>
+                  <TableCell>{r.ahead10}</TableCell>
+                  <TableCell>{r.ahead15}</TableCell>
+                  <TableCell>{r.ahead20}</TableCell>
                 </TableRow>
               ))}
             </TableBody>

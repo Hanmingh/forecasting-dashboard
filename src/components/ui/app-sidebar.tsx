@@ -24,7 +24,7 @@ const forecasting_items = [
     icon: Home,
   },
   {
-    title: "Forecasting",
+    title: "Forecast",
     url: "/forecast",
     icon: TrendingUpDown,
   },

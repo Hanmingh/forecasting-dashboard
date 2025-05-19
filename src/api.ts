@@ -1,5 +1,6 @@
 import axios, { type AxiosInstance, type InternalAxiosRequestConfig, type AxiosError } from 'axios';
 import { ACCESS_TOKEN, REFRESH_TOKEN } from './components/constants';
+import type { Forecast } from './hooks/types'
 
 const api: AxiosInstance = axios.create({
   baseURL: '/api',
@@ -51,5 +52,16 @@ api.interceptors.response.use(
   }
 );
 
+export async function getForecast(product?: string, days?: 1|5|10|15|20, current_date?: string, predicted_date?: string  /*'YYYY-MM-DD'*/, head?:number): Promise<Forecast[]> {
+  const res = await api.get<Forecast[]>('/forecast', {
+    params: { product, days, current_date, predicted_date, head }
+  })
+  return res.data
+}
+
+export async function getAccuracy(product?: string, days?: 1|5|10|15|20) {
+  const res = await api.get('/accuracy', { params: { product, days } })
+  return res.data
+}
 
 export default api;
