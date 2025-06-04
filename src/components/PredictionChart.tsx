@@ -12,92 +12,152 @@ import {
 import { Forecast, Accuracy } from '@/hooks/types';
 
 interface PredictionChartProps {
-  dates: string[];
   data: Forecast[];
   accuracy: Accuracy[];
+  currentValue: number;
+  currentDate: string;
 }
 
 const PredictionChart: React.FC<PredictionChartProps> = ({
-  dates,
   data,
   accuracy,
+  currentValue,
+  currentDate,
 }) => {
-  const horizons = [1, 5, 10, 15, 20];
-  const countMap: Record<number, number> = {
-    1: 1,
-    5: 4,
-    10: 5,
-    15: 5,
-    20: 5,
-  };
-
   const chartData = useMemo(() => {
-    const pts = horizons.flatMap((h) => {
-      const take = countMap[h];
-      const datesForH = dates
-        .slice(0, take)
-        .reverse();
+    if (data.length === 0) return [];
 
-      return datesForH.map((cd) => {
-        const f = data.find(
-          (r) => r.current_date === cd && r.n_days_ahead === h
-        );
-        if (!f) return null;
+    // Sort forecasts by n_days_ahead
+    const sortedForecasts = [...data].sort((a, b) => a.n_days_ahead - b.n_days_ahead);
 
-        const acc = accuracy.find((a) => a.n_days_ahead === h);
-        const mae = acc?.mae ?? 0;
+    // Create chart data points
+    const forecastPoints = sortedForecasts.map((forecast) => {
+      // Use residual_std for confidence bands, fallback to residual_mean_abs, then MAE from accuracy
+      let confidenceValue = 0;
+      
+      if (forecast.residual_std !== null && forecast.residual_std !== undefined) {
+        confidenceValue = forecast.residual_std;
+      } else if (forecast.residual_mean_abs !== null && forecast.residual_mean_abs !== undefined) {
+        confidenceValue = forecast.residual_mean_abs;
+      } else {
+        // Fallback to accuracy MAE
+        const acc = accuracy.find((a) => a.n_days_ahead === forecast.n_days_ahead);
+        confidenceValue = acc?.mae || 0;
+      }
 
-        return {
-          date: f.predicted_date,
-          value: f.predicted_value, 
-          min: f.predicted_value - mae / 2,
-          diff: mae,
-        };
-      });
-    })
-    .filter((x): x is {date:string;value:number;min:number;diff:number;} => !!x)
-    .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
+      // Calculate confidence bands (±1 standard deviation or mean absolute error)
+      const lowerBound = forecast.predicted_value - confidenceValue;
+      const upperBound = forecast.predicted_value + confidenceValue;
 
-    return pts;
-  }, [dates, data, accuracy]);
-  const x0 = data.find((a) => a.current_date === dates[0])
-  const actualPoint = [{date: dates[0], value: x0?.current_value??0, min: x0?.current_value??0, diff: 0}];
-  const FinalData = [...actualPoint, ...chartData];
+      return {
+        date: forecast.predicted_date,
+        value: forecast.predicted_value,
+        lowerBound,
+        upperBound,
+        confidenceWidth: confidenceValue * 2, // Total width of confidence band
+        min: lowerBound, // For area chart
+        daysAhead: forecast.n_days_ahead,
+      };
+    });
 
-  // Calculate min and max values for Y-axis domain
+    // Add current value as the starting point
+    const currentPoint = {
+      date: currentDate,
+      value: currentValue,
+      lowerBound: currentValue,
+      upperBound: currentValue,
+      confidenceWidth: 0,
+      min: currentValue,
+      daysAhead: 0,
+    };
+
+    // Combine and sort by date
+    const allPoints = [currentPoint, ...forecastPoints];
+    allPoints.sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
+
+    return allPoints;
+  }, [data, accuracy, currentValue, currentDate]);
+
+  // Calculate Y-axis domain with confidence bands
   const yDomain = useMemo(() => {
-    if (FinalData.length === 0) return [0, 100]; // Default range if no data
+    if (chartData.length === 0) return [0, 100];
     
     let minValue = Infinity;
     let maxValue = -Infinity;
     
-    FinalData.forEach(item => {
-      // Lower bound is min
-      minValue = Math.min(minValue, item.min);
-      // Upper bound is min + diff
-      maxValue = Math.max(maxValue, item.min + item.diff);
+    // Find the absolute minimum and maximum values across all confidence bands
+    chartData.forEach(item => {
+      minValue = Math.min(minValue, item.lowerBound);
+      maxValue = Math.max(maxValue, item.upperBound);
     });
     
-    // Apply very slight padding to prevent clipping (1%)
+    // Add minimal padding (1.5% of the range) for visual breathing room
     const range = maxValue - minValue;
-    const padding = range * 0.01;
+    const padding = range * 0.015; // 1.5% padding instead of 5%
     
-    return [minValue - padding, maxValue + padding];
-  }, [FinalData]);
+    // Ensure we don't go below 0 if it doesn't make sense for prices
+    const finalMin = Math.max(0, minValue - padding);
+    const finalMax = maxValue + padding;
+    
+    return [finalMin, finalMax];
+  }, [chartData]);
+  
+  // Custom tooltip
+  const CustomTooltip = ({ active, payload, label }: any) => {
+    if (active && payload && payload.length) {
+      const data = payload[0].payload;
+      return (
+        <div className="bg-white p-3 border rounded-lg shadow-lg">
+          <p className="font-medium">{new Date(label).toLocaleDateString()}</p>
+          <p className="text-blue-600">
+            <span className="font-medium">Forecast: </span>
+            ${data.value.toFixed(2)}
+          </p>
+          {data.daysAhead > 0 && (
+            <>
+              <p className="text-gray-600 text-sm">
+                {data.daysAhead} days ahead
+              </p>
+              <p className="text-gray-500 text-sm">
+                Range: ${data.lowerBound.toFixed(2)} - ${data.upperBound.toFixed(2)}
+              </p>
+            </>
+          )}
+        </div>
+      );
+    }
+    return null;
+  };
 
   return (
-    <ResponsiveContainer width="100%" height={300}>
-      <ComposedChart data={FinalData} margin={{ top: 10, right: 30, left: 0, bottom: 0 }}>
+    <ResponsiveContainer width="100%" height={400}>
+      <ComposedChart data={chartData} margin={{ top: 20, right: 30, left: 20, bottom: 20 }}>
         <defs>
-          <linearGradient id="colorBand" x1="0" y1="0" x2="0" y2="1">
-            <stop offset="0%" stopColor="#7f8c8d" stopOpacity={0.4}/>
-            <stop offset="100%" stopColor="#7f8c8d" stopOpacity={0.1}/>
+          <linearGradient id="confidenceBand" x1="0" y1="0" x2="0" y2="1">
+            <stop offset="0%" stopColor="#3b82f6" stopOpacity={0.3}/>
+            <stop offset="50%" stopColor="#3b82f6" stopOpacity={0.1}/>
+            <stop offset="100%" stopColor="#3b82f6" stopOpacity={0.3}/>
           </linearGradient>
         </defs>
-        <CartesianGrid strokeDasharray="3 3" />
-        <XAxis dataKey="date" stroke="#888888" fontSize={12} tickLine={false} axisLine={false}/>
+        
+        <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
+        
+        <XAxis 
+          dataKey="date" 
+          stroke="#6b7280" 
+          fontSize={12} 
+          tickLine={false} 
+          axisLine={false}
+          interval="preserveStartEnd"
+          tick={{ fontSize: 11 }}
+          tickFormatter={(value) => {
+            const date = new Date(value);
+            return `${date.getMonth() + 1}/${date.getDate()}`;
+          }}
+        />
+        
         <YAxis 
-          stroke="#888888"
+          stroke="#6b7280"
           fontSize={12}
           tickLine={false}
           axisLine={false}
@@ -105,18 +165,46 @@ const PredictionChart: React.FC<PredictionChartProps> = ({
           allowDataOverflow={true} 
           scale="auto" 
           tickCount={5}
-          tickFormatter={(value) => Math.round(value).toLocaleString()}
+          tickFormatter={(value) => `$${value.toFixed(0)}`}
         />
         
-        <Tooltip 
-          formatter={(value: number) => value.toLocaleString(undefined, {maximumFractionDigits: 2})} 
-          labelFormatter={(label) => new Date(label).toLocaleDateString()}
+        <Tooltip content={<CustomTooltip />} />
+
+        {/* Confidence band area */}
+        <Area 
+          dataKey="lowerBound" 
+          stackId="confidence"
+          stroke="none" 
+          fill="transparent" 
+        />
+        <Area 
+          dataKey="confidenceWidth" 
+          stackId="confidence"
+          stroke="none" 
+          fill="url(#confidenceBand)"
+          name="Confidence Band"
         />
 
-        <Area dataKey="min" stackId="1" stroke="none" fill="transparent" />
-        <Area dataKey="diff" name="deviation" stackId="1" stroke="none" fill="url(#colorBand)" />
-
-        <Line dataKey="value" name="forecast" type="monotone" strokeWidth={2} stroke="#ff7414" dot={{ r: 3 }} />
+        {/* Main forecast line */}
+        <Line 
+          dataKey="value" 
+          name="Forecast" 
+          type="monotone" 
+          strokeWidth={3} 
+          stroke="#f59e0b" 
+          dot={{ 
+            r: 4, 
+            fill: '#f59e0b', 
+            strokeWidth: 2, 
+            stroke: '#ffffff' 
+          }}
+          activeDot={{ 
+            r: 6, 
+            fill: '#f59e0b', 
+            strokeWidth: 2, 
+            stroke: '#ffffff' 
+          }}
+        />
       </ComposedChart>
     </ResponsiveContainer>
   );

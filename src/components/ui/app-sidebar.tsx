@@ -1,4 +1,4 @@
-import { History, Home, Lightbulb, Inbox, TrendingUpDown, Settings } from "lucide-react"
+import { History, Home, Lightbulb, Inbox, TrendingUpDown, Settings, Route } from "lucide-react"
 import Header from '@/components/header'
 import {
   Sidebar,
@@ -15,14 +15,18 @@ import { NavUser } from "./nav-user"
 import { useQuery } from '@tanstack/react-query'
 import api from '@/api'
 import { Link } from "react-router-dom"
+import { Skeleton } from "./skeleton"
 
 // Menu items.
-const forecasting_items = [
+const dashboard_items = [
   {
     title: "Home",
     url: "/",
     icon: Home,
   },
+]
+
+const data_items = [
   {
     title: "Forecast",
     url: "/forecast",
@@ -32,6 +36,14 @@ const forecasting_items = [
     title: "History",
     url: "/history",
     icon: History,
+  },
+]
+
+const optimization_items = [
+  {
+    title: "Route",
+    url: "/route",
+    icon: Route,
   },
 ]
 
@@ -64,7 +76,7 @@ export function AppSidebar() {
   })
 
   if (isLoading) {
-    return <Sidebar><SidebarContent>Loading user…</SidebarContent></Sidebar>
+    return <Skeleton/>
   }
   if (isError || !data) {
     return <Sidebar><SidebarContent>Unknown user infomation</SidebarContent></Sidebar>
@@ -81,10 +93,40 @@ export function AppSidebar() {
       <SidebarContent>
         <SidebarGroup>
           <Header />
+          <SidebarGroupLabel>Dashboard</SidebarGroupLabel>
+          <SidebarGroupContent>
+            <SidebarMenu>
+              {dashboard_items.map((item) => (
+                <SidebarMenuItem key={item.title}>
+                  <SidebarMenuButton asChild>
+                    <Link to={item.url}>
+                      <item.icon />
+                      <span>{item.title}</span>
+                    </Link>
+                  </SidebarMenuButton>
+                </SidebarMenuItem>
+              ))}
+            </SidebarMenu>
+          </SidebarGroupContent>
           <SidebarGroupLabel>Data</SidebarGroupLabel>
           <SidebarGroupContent>
             <SidebarMenu>
-              {forecasting_items.map((item) => (
+              {data_items.map((item) => (
+                <SidebarMenuItem key={item.title}>
+                  <SidebarMenuButton asChild>
+                    <Link to={item.url}>
+                      <item.icon />
+                      <span>{item.title}</span>
+                    </Link>
+                  </SidebarMenuButton>
+                </SidebarMenuItem>
+              ))}
+            </SidebarMenu>
+          </SidebarGroupContent>
+          <SidebarGroupLabel>Optimization</SidebarGroupLabel>
+          <SidebarGroupContent>
+            <SidebarMenu>
+              {optimization_items.map((item) => (
                 <SidebarMenuItem key={item.title}>
                   <SidebarMenuButton asChild>
                     <Link to={item.url}>

@@ -1,6 +1,6 @@
 import axios, { type AxiosInstance, type InternalAxiosRequestConfig, type AxiosError } from 'axios';
 import { ACCESS_TOKEN, REFRESH_TOKEN } from './components/constants';
-import type { Forecast } from './hooks/types'
+import type { Forecast, VesselResponse, VesselCreate, RouteResponse, RouteCreate, PortResponse } from './hooks/types'
 
 const api: AxiosInstance = axios.create({
   baseURL: '/api',
@@ -62,6 +62,90 @@ export async function getForecast(product?: string, days?: 1|5|10|15|20, current
 export async function getAccuracy(product?: string, days?: 1|5|10|15|20) {
   const res = await api.get('/accuracy', { params: { product, days } })
   return res.data
+}
+
+export async function getVessels(params?: {
+  skip?: number;
+  limit?: number;
+  vessel_type?: string;
+}): Promise<VesselResponse[]> {
+  const res = await api.get<VesselResponse[]>('/vessels', { params });
+  return res.data;
+}
+
+export async function getVessel(vesselId: number): Promise<VesselResponse> {
+  const res = await api.get<VesselResponse>(`/vessels/${vesselId}`);
+  return res.data;
+}
+
+export async function createVessel(vessel: VesselCreate): Promise<VesselResponse> {
+  const res = await api.post<VesselResponse>('/vessels', vessel);
+  return res.data;
+}
+
+export async function updateVessel(vesselId: number, vessel: VesselCreate): Promise<VesselResponse> {
+  const res = await api.put<VesselResponse>(`/vessels/${vesselId}`, vessel);
+  return res.data;
+}
+
+export async function deleteVessel(vesselId: number): Promise<void> {
+  await api.delete(`/vessels/${vesselId}`);
+}
+
+// Route APIs
+export async function getRoutes(params?: {
+  skip?: number;
+  limit?: number;
+  vessel_id?: number;
+  departure_port_id?: number;
+  arrival_port_id?: number;
+}): Promise<RouteResponse[]> {
+  const res = await api.get<RouteResponse[]>('/routes', { params });
+  return res.data;
+}
+
+export async function getRoute(routeId: number): Promise<RouteResponse> {
+  const res = await api.get<RouteResponse>(`/routes/${routeId}`);
+  return res.data;
+}
+
+export async function createRoute(route: RouteCreate): Promise<RouteResponse> {
+  const res = await api.post<RouteResponse>('/routes', route);
+  return res.data;
+}
+
+export async function updateRoute(routeId: number, route: RouteCreate): Promise<RouteResponse> {
+  const res = await api.put<RouteResponse>(`/routes/${routeId}`, route);
+  return res.data;
+}
+
+export async function updateRouteLocation(
+  routeId: number, 
+  location: { current_latitude: number; current_longitude: number }
+): Promise<RouteResponse> {
+  const res = await api.patch<RouteResponse>(`/routes/${routeId}/location`, null, {
+    params: location
+  });
+  return res.data;
+}
+
+export async function deleteRoute(routeId: number): Promise<void> {
+  await api.delete(`/routes/${routeId}`);
+}
+
+export async function getPorts(params?: {
+  skip?: number;
+  limit?: number;
+  port_type?: string;
+  country?: string;
+}): Promise<PortResponse[]> {
+  const res = await api.get<PortResponse[]>('/ports', { params });
+  return res.data;
+}
+
+export async function getPort(portId: number): Promise<PortResponse> {
+  const res = await api.get<PortResponse>(`/ports/${portId}`);
+  return res.data;
 }
 
 export default api;
