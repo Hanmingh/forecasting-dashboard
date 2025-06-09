@@ -1,25 +1,41 @@
-import { Badge } from "@/components/ui/badge";
-import { ScrollArea } from "@/components/ui/scroll-area";
-
-const notifications = [
-  { id: 1, title: "New Insight Available", description: "Your monthly performance report is ready.", date: "May 19", read: false },
-  { id: 2, title: "Update", description: "System maintenance scheduled for tomorrow.", date: "May 18", read: true },
-  { id: 3, title: "New Message", description: "You have received a new message from Admin.", date: "May 17", read: true },
-];
+import {
+  Card,
+  CardContent,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
+import { Mail, Inbox } from "lucide-react";
 
 const InboxPage = () => {
   return (
-    <ScrollArea className="h-72">
-      {notifications.map((notif) => (
-        <div key={notif.id} className="border-b last:border-none p-4 flex justify-between items-center">
-          <div>
-            <h3 className={`font-semibold ${notif.read ? 'text-gray-500' : 'text-black'}`}>{notif.title}</h3>
-            <p className="text-sm text-muted-foreground">{notif.description}</p>
-            </div>
-            <Badge variant={notif.read ? "secondary" : "default"}>{notif.date}</Badge>
-        </div>
-      ))}
-    </ScrollArea>
+    <div className="space-y-6">
+      {/* Header */}
+      <div>
+        <h1 className="text-3xl font-bold bg-gradient-to-r from-[#61adde] to-[#4670bc] bg-clip-text text-transparent">
+          Inbox
+        </h1>
+        <p className="text-muted-foreground mt-2">Notifications and messages</p>
+      </div>
+
+      {/* Empty Inbox */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <Mail className="h-5 w-5" />
+            Messages
+          </CardTitle>
+        </CardHeader>
+        <CardContent className="text-center py-12">
+          <div className="space-y-4">
+            <Inbox className="h-16 w-16 mx-auto text-muted-foreground" />
+            <h3 className="text-xl font-semibold">No messages</h3>
+            <p className="text-muted-foreground">
+              Your inbox is empty. New notifications and messages will appear here.
+            </p>
+          </div>
+        </CardContent>
+      </Card>
+    </div>
   );
 };
 

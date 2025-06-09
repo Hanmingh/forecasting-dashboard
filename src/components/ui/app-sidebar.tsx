@@ -41,14 +41,14 @@ const data_items = [
 
 const optimization_items = [
   {
-    title: "Routes",
-    url: "/route",
-    icon: Route,
-  },
-  {
     title: "Vessels",
     url: "/vessels",
     icon: Ship,
+  },
+  {
+    title: "Routes",
+    url: "/route",
+    icon: Route,
   },
 ]
 

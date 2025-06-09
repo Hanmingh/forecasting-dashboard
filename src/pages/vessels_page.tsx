@@ -17,6 +17,8 @@ import {
   DialogTitle,
   DialogFooter,
 } from "@/components/ui/dialog"
+import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
 import { PlusCircle, Anchor, RefreshCw, Ship, MapPin } from 'lucide-react';
 
 const VesselsPage: React.FC = () => {
@@ -108,11 +110,11 @@ const VesselsPage: React.FC = () => {
     const activeRoute = vesselRoutes.find(r => r.current_latitude && r.current_longitude);
     
     if (activeRoute) {
-      return { status: 'En Route', color: 'bg-green-100 text-green-800' };
+      return { status: 'En Route', variant: 'default' as const };
     } else if (vesselRoutes.length > 0) {
-      return { status: 'Scheduled', color: 'bg-blue-100 text-blue-800' };
+      return { status: 'Scheduled', variant: 'secondary' as const };
     } else {
-      return { status: 'Idle', color: 'bg-gray-100 text-gray-800' };
+      return { status: 'Idle', variant: 'outline' as const };
     }
   };
 
@@ -125,7 +127,7 @@ const VesselsPage: React.FC = () => {
   }
 
   return (
-    <div className="space-y-6 p-6">
+    <div className="space-y-6">
       {/* Header */}
       <div className="flex justify-between items-center">
         <div>
@@ -135,30 +137,31 @@ const VesselsPage: React.FC = () => {
           <p className="text-[#99b6c4] mt-2">Manage your vessel fleet and monitor operations</p>
         </div>
         <div className="flex gap-3">
-          <button
+          <Button
             onClick={() => {
               loadVessels();
               loadRoutes();
             }}
-            className="flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-[#99b6c4] to-[#61adde] text-white rounded-lg hover:opacity-90 transition-opacity shadow-md"
+            variant="outline"
+            className="bg-gradient-to-r from-[#99b6c4] to-[#61adde]"
           >
-            <RefreshCw className="h-4 w-4" />
+            <RefreshCw className="h-4 w-4 mr-2" />
             Refresh
-          </button>
-          <button
+          </Button>
+          <Button
             onClick={handleCreateNewVessel}
-            className="flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-[#61adde] to-[#4670bc] text-white rounded-lg hover:opacity-90 transition-opacity shadow-md"
+            className="bg-gradient-to-r from-[#61adde] to-[#4670bc]"
           >
-            <PlusCircle className="h-4 w-4" />
+            <PlusCircle className="h-4 w-4 mr-2" />
             Add Vessel
-          </button>
+          </Button>
         </div>
       </div>
 
       {/* Fleet Statistics */}
       <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-        <Card className="border-0 shadow-lg bg-gradient-to-br from-[#61adde]/5 to-[#99b6c4]/5">
-          <CardHeader className="pb-2">
+        <Card>
+          <CardHeader>
             <CardTitle className="text-sm font-medium text-[#4670bc] flex items-center gap-2">
               <Ship className="h-4 w-4" />
               Total Vessels
@@ -166,12 +169,12 @@ const VesselsPage: React.FC = () => {
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold text-[#61adde]">{vessels.length}</div>
-            <p className="text-xs text-[#99b6c4] mt-1">Fleet size</p>
+            <p className="text-xs text-muted-foreground">Fleet size</p>
           </CardContent>
         </Card>
 
-        <Card className="border-0 shadow-lg bg-gradient-to-br from-[#61adde]/5 to-[#99b6c4]/5">
-          <CardHeader className="pb-2">
+        <Card>
+          <CardHeader>
             <CardTitle className="text-sm font-medium text-[#4670bc] flex items-center gap-2">
               <MapPin className="h-4 w-4" />
               En Route
@@ -181,31 +184,31 @@ const VesselsPage: React.FC = () => {
             <div className="text-2xl font-bold text-[#61adde]">
               {vessels.filter(v => getVesselStatus(v).status === 'En Route').length}
             </div>
-            <p className="text-xs text-[#99b6c4] mt-1">Currently sailing</p>
+            <p className="text-xs text-muted-foreground">Currently sailing</p>
           </CardContent>
         </Card>
 
-        <Card className="border-0 shadow-lg bg-gradient-to-br from-[#61adde]/5 to-[#99b6c4]/5">
-          <CardHeader className="pb-2">
+        <Card>
+          <CardHeader>
             <CardTitle className="text-sm font-medium text-[#4670bc]">Scheduled</CardTitle>
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold text-[#61adde]">
               {vessels.filter(v => getVesselStatus(v).status === 'Scheduled').length}
             </div>
-            <p className="text-xs text-[#99b6c4] mt-1">With planned routes</p>
+            <p className="text-xs text-muted-foreground">With planned routes</p>
           </CardContent>
         </Card>
 
-        <Card className="border-0 shadow-lg bg-gradient-to-br from-[#61adde]/5 to-[#99b6c4]/5">
-          <CardHeader className="pb-2">
+        <Card>
+          <CardHeader>
             <CardTitle className="text-sm font-medium text-[#4670bc]">Idle</CardTitle>
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold text-[#61adde]">
               {vessels.filter(v => getVesselStatus(v).status === 'Idle').length}
             </div>
-            <p className="text-xs text-[#99b6c4] mt-1">Available</p>
+            <p className="text-xs text-muted-foreground">Available</p>
           </CardContent>
         </Card>
       </div>
@@ -217,8 +220,8 @@ const VesselsPage: React.FC = () => {
           const status = getVesselStatus(vessel);
           
           return (
-            <Card key={vessel.id} className="border-0 shadow-xl bg-white hover:shadow-2xl transition-shadow">
-              <CardHeader className="pb-4 bg-gradient-to-r from-[#61adde]/10 to-[#99b6c4]/10 rounded-t-lg">
+            <Card key={vessel.id} className="hover:shadow-lg transition-shadow">
+              <CardHeader>
                 <div className="flex justify-between items-start">
                   <div className="flex items-center gap-3">
                     <div className="p-2 bg-gradient-to-r from-[#61adde] to-[#4670bc] rounded-full">
@@ -226,58 +229,60 @@ const VesselsPage: React.FC = () => {
                     </div>
                     <div>
                       <CardTitle className="text-lg text-[#4670bc]">{vessel.vessel_name}</CardTitle>
-                      <CardDescription className="text-[#99b6c4]">{vessel.vessel_type}</CardDescription>
+                      <CardDescription>{vessel.vessel_type}</CardDescription>
                     </div>
                   </div>
-                  <div className={`px-3 py-1 rounded-full text-xs font-medium ${status.color}`}>
+                  <Badge variant={status.variant}>
                     {status.status}
-                  </div>
+                  </Badge>
                 </div>
               </CardHeader>
               
-              <CardContent className="pt-4 space-y-4">
+              <CardContent className="space-y-4">
                 {/* Route Information */}
                 <div>
                   <div className="flex items-center justify-between mb-2">
                     <span className="text-sm font-medium text-[#4670bc]">Routes</span>
-                    <span className="text-sm text-[#99b6c4]">{vesselRoutes.length} active</span>
+                    <span className="text-sm text-muted-foreground">{vesselRoutes.length} active</span>
                   </div>
                   
                   {vesselRoutes.length > 0 ? (
                     <div className="space-y-2 max-h-32 overflow-y-auto">
                       {vesselRoutes.slice(0, 3).map(route => (
-                        <div key={route.id} className="text-xs p-2 bg-[#61adde]/5 rounded border-l-2 border-[#61adde]">
+                        <div key={route.id} className="text-xs p-2 bg-muted rounded border-l-4 border-[#61adde]">
                           <div className="font-medium text-[#4670bc]">Route #{route.id}</div>
-                          <div className="text-[#99b6c4]">
+                          <div className="text-muted-foreground">
                             Departure: {new Date(route.scheduled_departure).toLocaleDateString()}
                           </div>
                         </div>
                       ))}
                       {vesselRoutes.length > 3 && (
-                        <div className="text-xs text-[#99b6c4] text-center">
+                        <div className="text-xs text-muted-foreground text-center">
                           +{vesselRoutes.length - 3} more routes
                         </div>
                       )}
                     </div>
                   ) : (
-                    <div className="text-xs text-[#99b6c4] italic">No active routes</div>
+                    <div className="text-xs text-muted-foreground italic">No active routes</div>
                   )}
                 </div>
 
                 {/* Action Buttons */}
-                <div className="flex gap-2 pt-2 border-t border-[#99b6c4]/20">
-                  <button
+                <div className="flex gap-2 pt-2 border-t">
+                  <Button
                     onClick={() => handleEditVessel(vessel)}
-                    className="flex-1 px-3 py-2 bg-gradient-to-r from-[#99b6c4] to-[#61adde] text-white text-sm rounded-lg hover:opacity-90 transition-opacity"
+                    size="sm"
+                    className="flex-1 bg-gradient-to-r from-[#99b6c4] to-[#61adde]"
                   >
                     Edit
-                  </button>
-                  <button
+                  </Button>
+                  <Button
                     onClick={() => handleDeleteVessel(vessel.id)}
-                    className="px-3 py-2 bg-red-500 text-white text-sm rounded-lg hover:bg-red-600 transition-colors"
+                    size="sm"
+                    variant="destructive"
                   >
                     Delete
-                  </button>
+                  </Button>
                 </div>
               </CardContent>
             </Card>
@@ -286,51 +291,51 @@ const VesselsPage: React.FC = () => {
 
         {/* Add New Vessel Card */}
         <Card 
-          className="border-2 border-dashed border-[#99b6c4]/40 cursor-pointer hover:border-[#61adde] hover:bg-[#61adde]/5 transition-all"
+          className="border-dashed cursor-pointer hover:bg-muted/50 transition-colors"
           onClick={handleCreateNewVessel}
         >
           <CardContent className="flex flex-col items-center justify-center h-full min-h-[200px] text-center">
-            <div className="p-4 bg-gradient-to-r from-[#61adde]/10 to-[#99b6c4]/10 rounded-full mb-4">
+            <div className="p-4 bg-muted rounded-full mb-4">
               <PlusCircle className="h-8 w-8 text-[#61adde]" />
             </div>
             <h3 className="font-semibold text-[#4670bc] mb-2">Add New Vessel</h3>
-            <p className="text-sm text-[#99b6c4]">Expand your fleet</p>
+            <p className="text-sm text-muted-foreground">Expand your fleet</p>
           </CardContent>
         </Card>
       </div>
 
       {/* Vessel Dialog */}
       <Dialog open={isVesselDialogOpen} onOpenChange={setIsVesselDialogOpen}>
-        <DialogContent className="sm:max-w-[425px]">
+        <DialogContent>
           <DialogHeader>
             <DialogTitle className="text-[#4670bc]">
               {selectedVessel ? 'Edit Vessel' : 'Add New Vessel'}
             </DialogTitle>
-            <DialogDescription className="text-[#99b6c4]">
+            <DialogDescription>
               {selectedVessel ? 'Modify the vessel details' : 'Enter the details for a new vessel'}
             </DialogDescription>
           </DialogHeader>
           <form id="vesselForm" onSubmit={handleVesselSubmit} className="space-y-4">
             <div>
-              <label className="block mb-2 text-sm font-medium text-[#4670bc]">Vessel Name</label>
+              <label className="block mb-2 text-sm font-medium">Vessel Name</label>
               <input
                 type="text"
                 name="vessel_name"
                 value={vesselFormData.vessel_name}
                 onChange={(e) => setVesselFormData(prev => ({ ...prev, vessel_name: e.target.value }))}
-                className="w-full p-3 border border-[#99b6c4]/30 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#61adde] focus:border-transparent"
+                className="w-full p-3 border rounded-lg focus:ring-2 focus:ring-[#61adde] focus:border-transparent"
                 placeholder="Enter vessel name"
                 required
               />
             </div>
 
             <div>
-              <label className="block mb-2 text-sm font-medium text-[#4670bc]">Vessel Type</label>
+              <label className="block mb-2 text-sm font-medium">Vessel Type</label>
               <select
                 name="vessel_type"
                 value={vesselFormData.vessel_type}
                 onChange={(e) => setVesselFormData(prev => ({ ...prev, vessel_type: e.target.value }))}
-                className="w-full p-3 border border-[#99b6c4]/30 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#61adde] focus:border-transparent"
+                className="w-full p-3 border rounded-lg focus:ring-2 focus:ring-[#61adde] focus:border-transparent"
                 required
               >
                 <option value="">Select vessel type</option>
@@ -345,21 +350,21 @@ const VesselsPage: React.FC = () => {
               </select>
             </div>
           </form>
-          <DialogFooter className="gap-2">
-            <button
+          <DialogFooter>
+            <Button
               type="button"
               onClick={() => setIsVesselDialogOpen(false)}
-              className="px-4 py-2 bg-gray-500 text-white rounded-lg hover:bg-gray-600 transition-colors"
+              variant="outline"
             >
               Cancel
-            </button>
-            <button
+            </Button>
+            <Button
               type="submit"
               form="vesselForm"
-              className="px-4 py-2 bg-gradient-to-r from-[#61adde] to-[#4670bc] text-white rounded-lg hover:opacity-90 transition-opacity"
+              className="bg-gradient-to-r from-[#61adde] to-[#4670bc]"
             >
               {selectedVessel ? 'Update Vessel' : 'Create Vessel'}
-            </button>
+            </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>

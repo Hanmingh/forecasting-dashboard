@@ -1,87 +1,88 @@
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Switch } from "@/components/ui/switch";
-import { Label } from "@/components/ui/label";
-import { Input } from "@/components/ui/input";
+import React from 'react';
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { useTheme } from "@/components/ui/theme-provider";
-import { useColorPreferences } from "@/hooks/use-color-preferences";
-import { Moon, Sun, TrendingUp, TrendingDown } from "lucide-react";
+import { useColorPreferences } from '@/hooks/use-color-preferences';
 
-const SettingPage = () => {
-  const { theme, setTheme } = useTheme();
-  const { updateColorScheme, isTraditional } = useColorPreferences();
-  const isDark = theme === 'dark';
+const SettingsPage: React.FC = () => {
+  const { getUpColor, getDownColor, updateColorScheme, isTraditional } = useColorPreferences();
+
+  const colorSchemes = [
+    { name: 'Traditional (Green Up, Red Down)', scheme: 'traditional' as const },
+    { name: 'Inverted (Red Up, Green Down)', scheme: 'inverted' as const },
+  ];
 
   return (
-    <Card className="max-w-2xl mx-auto my-10 shadow-lg">
-      <CardHeader>
-        <CardTitle>Settings</CardTitle>
-      </CardHeader>
-      <CardContent className="space-y-6">
-        {/* Theme Setting */}
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-2">
-            {isDark ? (
-              <Moon className="h-5 w-5 text-blue-500" />
-            ) : (
-              <Sun className="h-5 w-5 text-yellow-500" />
-            )}
-            <Label htmlFor="theme-toggle">Dark Mode</Label>
-          </div>
-          <Switch 
-            id="theme-toggle" 
-            checked={isDark}
-            onCheckedChange={(checked) => setTheme(checked ? 'dark' : 'light')}
-          />
-        </div>
+    <div className="space-y-6">
+      {/* Header */}
+      <div>
+        <h1 className="text-3xl font-bold bg-gradient-to-r from-[#61adde] to-[#4670bc] bg-clip-text text-transparent">
+          Settings
+        </h1>
+        <p className="text-muted-foreground mt-2">Customize your forecasting dashboard experience</p>
+      </div>
 
-        {/* Color Scheme Setting */}
-        <div className="space-y-3">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-2">
-              <div className="flex gap-1">
-                <TrendingUp className={`h-4 w-4 ${isTraditional() ? 'text-green-600' : 'text-red-600'}`} />
-                <TrendingDown className={`h-4 w-4 ${isTraditional() ? 'text-red-600' : 'text-green-600'}`} />
+      {/* Color Preferences */}
+      <Card>
+        <CardHeader>
+          <CardTitle>Color Preferences</CardTitle>
+          <CardDescription>
+            Choose your preferred color scheme for positive and negative price changes
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          <div className="space-y-4">
+            <div className="text-sm font-medium mb-3">Current Colors:</div>
+            <div className="flex items-center gap-4 mb-6">
+              <div className="flex items-center gap-2">
+                <span className="text-sm">Positive:</span>
+                <span className={`font-bold ${getUpColor()}`}>+2.50% ↗</span>
               </div>
-              <Label htmlFor="color-scheme-toggle">Traditional Colors (Green Up, Red Down)</Label>
+              <div className="flex items-center gap-2">
+                <span className="text-sm">Negative:</span>
+                <span className={`font-bold ${getDownColor()}`}>-1.80% ↘</span>
+              </div>
             </div>
-            <Switch 
-              id="color-scheme-toggle" 
-              checked={isTraditional()}
-              onCheckedChange={(checked) => updateColorScheme(checked ? 'traditional' : 'inverted')}
-            />
+            
+            <div className="space-y-3">
+              {colorSchemes.map((option, index) => (
+                <Button
+                  key={index}
+                  variant={isTraditional() === (option.scheme === 'traditional') ? "default" : "outline"}
+                  onClick={() => updateColorScheme(option.scheme)}
+                  className="justify-start h-auto p-4 w-full"
+                >
+                  <div className="flex items-center gap-4">
+                    <span className="text-sm">{option.name}</span>
+                    <div className="flex gap-2">
+                      {option.scheme === 'traditional' ? (
+                        <>
+                          <span className="text-green-600 font-bold">+2.5%</span>
+                          <span>/</span>
+                          <span className="text-red-600 font-bold">-2.5%</span>
+                        </>
+                      ) : (
+                        <>
+                          <span className="text-red-600 font-bold">+2.5%</span>
+                          <span>/</span>
+                          <span className="text-green-600 font-bold">-2.5%</span>
+                        </>
+                      )}
+                    </div>
+                  </div>
+                </Button>
+              ))}
+            </div>
           </div>
-          <div className="text-sm text-gray-600 pl-7">
-            {isTraditional() ? (
-              <span>Current: <span className="text-green-600 font-medium">Green = Rise</span>, <span className="text-red-600 font-medium">Red = Fall</span></span>
-            ) : (
-              <span>Current: <span className="text-red-600 font-medium">Red = Rise</span>, <span className="text-green-600 font-medium">Green = Fall</span></span>
-            )}
-          </div>
-        </div>
-
-        {/* Notifications Setting */}
-        <div className="flex items-center justify-between">
-          <Label htmlFor="notifications">Enable Notifications</Label>
-          <Switch id="notifications" />
-        </div>
-
-        {/* Email Setting */}
-        <div>
-          <Label>Email Address</Label>
-          <Input type="email" placeholder="user@example.com" />
-        </div>
-
-        {/* Password Setting */}
-        <div>
-          <Label>Change Password</Label>
-          <Input type="password" placeholder="New Password" />
-        </div>
-
-        <Button variant="default">Save Changes</Button>
-      </CardContent>
-    </Card>
+        </CardContent>
+      </Card>
+    </div>
   );
 };
 
-export default SettingPage;
+export default SettingsPage;

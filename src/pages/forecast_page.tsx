@@ -213,7 +213,7 @@ const ForecastPage = () => {
   }
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-6">
       {/* Summary Statistics */}
       <Card>
         <CardHeader>
@@ -235,9 +235,8 @@ const ForecastPage = () => {
                   min={1}
                   max={60}
                   step={1}
-                  className="w-full"
                 />
-                <div className="flex justify-between text-xs text-gray-500">
+                <div className="flex justify-between text-xs text-muted-foreground">
                   <span>1d</span>
                   <span>30d</span>
                   <span>60d</span>
@@ -292,7 +291,7 @@ const ForecastPage = () => {
                     <span>Market Sentiment:</span>
                     <span className={`font-medium ${
                       gainersLosers.gainers > gainersLosers.losers ? getUpColor() : 
-                      gainersLosers.losers > gainersLosers.gainers ? getDownColor() : 'text-gray-600'
+                      gainersLosers.losers > gainersLosers.gainers ? getDownColor() : 'text-muted-foreground'
                     }`}>
                       {gainersLosers.gainers > gainersLosers.losers ? 'Bullish' : 
                        gainersLosers.losers > gainersLosers.gainers ? 'Bearish' : 'Neutral'}
@@ -320,7 +319,7 @@ const ForecastPage = () => {
                       <span className="text-xs mt-1 text-center w-8">
                         {item.bin >= 0 ? '+' : ''}{item.bin}%
                       </span>
-                      <span className="text-xs text-gray-500 w-8 text-center">{item.count}</span>
+                      <span className="text-xs text-muted-foreground w-8 text-center">{item.count}</span>
                     </div>
                   ))}
                 </div>
@@ -329,7 +328,7 @@ const ForecastPage = () => {
               {/* Gainers vs Losers Line */}
               <div className="h-[100px] flex flex-col">
                 <div className="flex-1 flex flex-col justify-center">
-                  <div className="w-full bg-gray-200 rounded-full h-2 flex overflow-hidden">
+                  <div className="w-full bg-muted rounded-full h-2 flex overflow-hidden">
                     <div 
                       className="h-full" 
                       style={{ 
@@ -338,7 +337,7 @@ const ForecastPage = () => {
                       }}
                     />
                     <div 
-                      className="bg-gray-400 h-full" 
+                      className="bg-muted-foreground h-full" 
                       style={{ width: `${gainersLosers.total > 0 ? (gainersLosers.neutral / gainersLosers.total) * 100 : 33.33}%` }}
                     />
                     <div 
@@ -357,7 +356,7 @@ const ForecastPage = () => {
                       <span className={getDownColor()}>Bearish</span>
                     </div>
                     <div className="flex flex-col items-center">
-                      <span className="text-gray-600 font-bold text-lg">{gainersLosers.neutral}</span>
+                      <span className="text-muted-foreground font-bold text-lg">{gainersLosers.neutral}</span>
                       <span>Neutral</span>
                     </div>
                     <div className="flex flex-col items-end">
@@ -372,11 +371,11 @@ const ForecastPage = () => {
         </CardContent>
       </Card>
 
-      <Card className="flex-1">
+      <Card>
         <CardHeader>
           <div className="flex items-center justify-between">
             <CardTitle>Fuel Product Forecasts</CardTitle>
-            <span className="text-sm text-gray-500">Updated at {current_day}</span>
+            <span className="text-sm text-muted-foreground">Updated at {current_day}</span>
           </div>
         </CardHeader>
         <CardContent>
@@ -407,7 +406,7 @@ const ForecastPage = () => {
               {rows.map((r) => (
                 <TableRow
                   key={r.product}
-                    className="cursor-pointer hover:bg-gray-50"
+                  className="cursor-pointer hover:bg-muted/50"
                   onClick={() => navigate(`/${r.product}`)}
                 >
                   <TableCell className="font-medium">
@@ -416,7 +415,7 @@ const ForecastPage = () => {
                         className={`h-4 w-4 cursor-pointer ${
                           isFavorite(r.product) 
                             ? 'fill-yellow-400 text-yellow-400' 
-                            : 'text-gray-300 hover:text-yellow-400'
+                            : 'text-muted-foreground hover:text-yellow-400'
                         }`}
                         onClick={(e) => {
                           e.stopPropagation();
@@ -519,7 +518,7 @@ const ForecastPage = () => {
         </CardContent>
       </Card>
     </div>
-  )
-}
+  );
+};
 
-export default ForecastPage
+export default ForecastPage;

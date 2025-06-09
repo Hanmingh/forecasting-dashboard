@@ -1,35 +1,43 @@
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
-import { BarChart2, FileText } from "lucide-react";
-
-const reports = [
-  { id: 1, title: "May 2025 Report", type: "Performance" },
-  { id: 2, title: "User Activity Analysis", type: "Engagement" },
-  { id: 3, title: "Market Overview Q1", type: "Market Analysis" },
-];
+import {
+  Card,
+  CardContent,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
+import { TrendingUp, BarChart3 } from "lucide-react";
 
 const InsightsPage = () => {
   return (
-    <Card className="max-w-2xl mx-auto my-10 shadow-lg">
-      <CardHeader>
-        <CardTitle>Insights & Reports</CardTitle>
-      </CardHeader>
-      <CardContent>
-        <div className="grid gap-4">
-          {reports.map(report => (
-            <Card key={report.id} className="flex items-center justify-between p-4 shadow-sm">
-              <div className="flex items-center gap-3">
-                <BarChart2 className="text-primary" />
-                <span>{report.title}</span>
-              </div>
-              <Button variant="outline" size="sm">
-                <FileText className="mr-2 h-4 w-4" />View
-              </Button>
-            </Card>
-          ))}
-        </div>
-      </CardContent>
-    </Card>
+    <div className="space-y-6">
+      {/* Header */}
+      <div>
+        <h1 className="text-3xl font-bold bg-gradient-to-r from-[#61adde] to-[#4670bc] bg-clip-text text-transparent">
+          Market Insights
+        </h1>
+        <p className="text-muted-foreground mt-2">Advanced analytics and market intelligence</p>
+      </div>
+
+      {/* Coming Soon Message */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <BarChart3 className="h-5 w-5" />
+            Advanced Analytics
+          </CardTitle>
+        </CardHeader>
+        <CardContent className="text-center py-12">
+          <div className="space-y-4">
+            <div className="text-muted-foreground">
+              <TrendingUp className="h-16 w-16 mx-auto mb-4" />
+            </div>
+            <h3 className="text-xl font-semibold">Coming Soon</h3>
+            <p className="text-muted-foreground max-w-md mx-auto">
+              Advanced market insights, trend analysis, and predictive analytics will be available here soon.
+            </p>
+          </div>
+        </CardContent>
+      </Card>
+    </div>
   );
 };
 

@@ -19,6 +19,8 @@ import {
   DialogTitle,
   DialogFooter,
 } from "@/components/ui/dialog"
+import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
 import { PlusCircle, RefreshCw } from 'lucide-react';
 
 const RoutePage: React.FC = () => {
@@ -145,110 +147,117 @@ const RoutePage: React.FC = () => {
   }
 
   return (
-    <div className="p-4">
-      {/* Header with refresh button */}
-      <div className="flex justify-between items-center mb-6">
+    <div className="space-y-6">
+      {/* Header */}
+      <div className="flex justify-between items-center">
         <div>
           <h1 className="text-3xl font-bold bg-gradient-to-r from-[#61adde] to-[#4670bc] bg-clip-text text-transparent">Route Management</h1>
-          <p className="text-[#99b6c4]">Plan, monitor and manage shipping routes</p>
+          <p className="text-[#99b6c4] mt-2">Plan, monitor and manage shipping routes</p>
         </div>
-        <button
+        <Button
           onClick={() => {
             loadRoutes();
             loadVessels();
             loadPorts();
           }}
-          className="flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-[#61adde] to-[#4670bc] text-white rounded-lg hover:opacity-90 transition-opacity"
+          className="bg-gradient-to-r from-[#61adde] to-[#4670bc]"
         >
-          <RefreshCw className="h-4 w-4" />
+          <RefreshCw className="h-4 w-4 mr-2" />
           Refresh Data
-        </button>
+        </Button>
       </div>
 
-      <div className="grid grid-cols-1 gap-6">
+      <div className="space-y-6">
         {/* Routes Section */}
-        <Card className="w-full">
+        <Card>
           <CardHeader className="flex flex-row items-center justify-between">
             <div>
               <CardTitle className="text-[#61adde]">Routes</CardTitle>
               <CardDescription>Manage and monitor your shipping routes</CardDescription>
             </div>
-            <button
+            <Button
               onClick={handleCreateNewRoute}
-              className="p-2 hover:bg-gray-100 rounded-full transition-colors"
+              variant="ghost"
+              size="sm"
             >
-              <PlusCircle className="h-6 w-6 text-[#61adde]" />
-            </button>
+              <PlusCircle className="h-4 w-4" />
+            </Button>
           </CardHeader>
           <CardContent>
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
               {routes.map(route => (
                 <Card 
                   key={route.id} 
-                  className={`shadow-sm cursor-pointer transition-all hover:shadow-md ${
-                    selectedRouteForMap === route.id ? 'ring-2 ring-[#61adde] bg-blue-50' : ''
+                  className={`cursor-pointer transition-all hover:shadow-md ${
+                    selectedRouteForMap === route.id ? 'ring-2 ring-[#61adde]' : ''
                   }`}
                   onClick={() => setSelectedRouteForMap(selectedRouteForMap === route.id ? undefined : route.id)}
                 >
-                  <CardHeader className="p-4">
+                  <CardHeader className="pb-2">
                     <div className="flex justify-between items-start">
                       <div className="flex-1 min-w-0">
-                        <CardTitle className="text-base truncate">
+                        <CardTitle className="text-sm truncate">
                           {vessels.find(v => v.id === route.vessel_id)?.vessel_name || `Vessel ${route.vessel_id}`}
                         </CardTitle>
-                        <div className={`inline-flex px-2 py-1 rounded-full text-xs mt-2 ${
-                          route.current_latitude && route.current_longitude
-                            ? 'bg-green-100 text-green-800'
-                            : new Date(route.scheduled_departure) > new Date()
-                            ? 'bg-blue-100 text-blue-800'
-                            : 'bg-yellow-100 text-yellow-800'
-                        }`}>
+                        <Badge 
+                          variant={
+                            route.current_latitude && route.current_longitude
+                              ? 'default'
+                              : new Date(route.scheduled_departure) > new Date()
+                              ? 'secondary'
+                              : 'outline'
+                          }
+                          className="mt-1"
+                        >
                           {route.current_latitude && route.current_longitude
                             ? 'En Route'
                             : new Date(route.scheduled_departure) > new Date()
                             ? 'Scheduled'
                             : 'Departed'
                           }
-                        </div>
+                        </Badge>
                       </div>
                     </div>
                   </CardHeader>
-                  <CardContent className="p-4 pt-0 space-y-2">
-                    <div className="text-sm">
+                  <CardContent className="space-y-2">
+                    <div className="text-xs">
                       <strong>From:</strong> {ports.find(p => p.id === route.departure_port_id)?.port_name || `Port ${route.departure_port_id}`}
                     </div>
-                    <div className="text-sm">
+                    <div className="text-xs">
                       <strong>To:</strong> {ports.find(p => p.id === route.arrival_port_id)?.port_name || `Port ${route.arrival_port_id}`}
                     </div>
-                    <div className="grid grid-cols-2 gap-2 text-sm mt-3">
+                    <div className="grid grid-cols-2 gap-2 text-xs">
                       <div>
-                        <span className="text-gray-500">Departure:</span>
+                        <span className="text-muted-foreground">Departure:</span>
                         <div className="font-medium">{new Date(route.scheduled_departure).toLocaleDateString()}</div>
                       </div>
                       <div>
-                        <span className="text-gray-500">Arrival:</span>
+                        <span className="text-muted-foreground">Arrival:</span>
                         <div className="font-medium">{new Date(route.estimated_arrival).toLocaleDateString()}</div>
                       </div>
                     </div>
-                    <div className="flex gap-2 mt-3">
-                      <button
+                    <div className="flex gap-2 pt-2">
+                      <Button
                         onClick={(e) => {
                           e.stopPropagation();
                           handleEdit(route);
                         }}
-                        className="flex-1 px-3 py-1.5 bg-[#61adde] text-white text-xs rounded hover:bg-[#4670bc] transition-colors"
+                        size="sm"
+                        className="flex-1 bg-[#61adde] hover:bg-[#4670bc]"
                       >
                         Edit
-                      </button>
-                      <button
+                      </Button>
+                      <Button
                         onClick={(e) => {
                           e.stopPropagation();
                           handleDelete(route.id);
                         }}
-                        className="flex-1 px-3 py-1.5 bg-red-500 text-white text-xs rounded hover:bg-red-600 transition-colors"
+                        size="sm"
+                        variant="destructive"
+                        className="flex-1"
                       >
                         Delete
-                      </button>
+                      </Button>
                     </div>
                   </CardContent>
                 </Card>
@@ -256,13 +265,13 @@ const RoutePage: React.FC = () => {
               
               {/* Add New Route Card */}
               <Card 
-                className="shadow-sm border-dashed cursor-pointer hover:bg-gray-50 transition-colors border-[#99b6c4]"
+                className="border-dashed cursor-pointer hover:bg-muted/50 transition-colors"
                 onClick={handleCreateNewRoute}
               >
-                <CardContent className="flex items-center justify-center h-[200px]">
+                <CardContent className="flex items-center justify-center h-[180px]">
                   <div className="text-center">
                     <PlusCircle className="h-8 w-8 mx-auto mb-2 text-[#61adde]" />
-                    <p className="text-[#99b6c4] text-sm">Add New Route</p>
+                    <p className="text-muted-foreground text-sm">Add New Route</p>
                   </div>
                 </CardContent>
               </Card>
@@ -290,7 +299,7 @@ const RoutePage: React.FC = () => {
 
       {/* Route Dialog */}
       <Dialog open={isRouteDialogOpen} onOpenChange={setIsRouteDialogOpen}>
-        <DialogContent className="sm:max-w-[425px]">
+        <DialogContent>
           <DialogHeader>
             <DialogTitle className="text-[#61adde]">{selectedRoute ? 'Edit Route' : 'Create New Route'}</DialogTitle>
             <DialogDescription>
@@ -304,7 +313,7 @@ const RoutePage: React.FC = () => {
                 name="vessel_id"
                 value={routeFormData.vessel_id}
                 onChange={handleInputChange}
-                className="w-full p-2 border rounded focus:border-[#61adde] focus:ring-1 focus:ring-[#61adde]"
+                className="w-full p-2 border rounded focus:ring-2 focus:ring-[#61adde] focus:border-transparent"
                 required
               >
                 <option value="">Select Vessel</option>
@@ -322,7 +331,7 @@ const RoutePage: React.FC = () => {
                 name="departure_port_id"
                 value={routeFormData.departure_port_id}
                 onChange={handleInputChange}
-                className="w-full p-2 border rounded focus:border-[#61adde] focus:ring-1 focus:ring-[#61adde]"
+                className="w-full p-2 border rounded focus:ring-2 focus:ring-[#61adde] focus:border-transparent"
                 required
               >
                 <option value="">Select Departure Port</option>
@@ -340,7 +349,7 @@ const RoutePage: React.FC = () => {
                 name="arrival_port_id"
                 value={routeFormData.arrival_port_id}
                 onChange={handleInputChange}
-                className="w-full p-2 border rounded focus:border-[#61adde] focus:ring-1 focus:ring-[#61adde]"
+                className="w-full p-2 border rounded focus:ring-2 focus:ring-[#61adde] focus:border-transparent"
                 required
               >
                 <option value="">Select Arrival Port</option>
@@ -359,7 +368,7 @@ const RoutePage: React.FC = () => {
                 name="scheduled_departure"
                 value={routeFormData.scheduled_departure}
                 onChange={handleInputChange}
-                className="w-full p-2 border rounded focus:border-[#61adde] focus:ring-1 focus:ring-[#61adde]"
+                className="w-full p-2 border rounded focus:ring-2 focus:ring-[#61adde] focus:border-transparent"
                 required
               />
             </div>
@@ -371,26 +380,26 @@ const RoutePage: React.FC = () => {
                 name="estimated_arrival"
                 value={routeFormData.estimated_arrival}
                 onChange={handleInputChange}
-                className="w-full p-2 border rounded focus:border-[#61adde] focus:ring-1 focus:ring-[#61adde]"
+                className="w-full p-2 border rounded focus:ring-2 focus:ring-[#61adde] focus:border-transparent"
                 required
               />
             </div>
           </form>
           <DialogFooter>
-            <button
+            <Button
               type="button"
               onClick={() => setIsRouteDialogOpen(false)}
-              className="px-4 py-2 bg-gray-500 text-white rounded hover:bg-gray-600 transition-colors"
+              variant="outline"
             >
               Cancel
-            </button>
-            <button
+            </Button>
+            <Button
               type="submit"
               form="routeForm"
-              className="px-4 py-2 bg-gradient-to-r from-[#61adde] to-[#4670bc] text-white rounded hover:opacity-90 transition-opacity"
+              className="bg-gradient-to-r from-[#61adde] to-[#4670bc]"
             >
               {selectedRoute ? 'Update Route' : 'Create Route'}
-            </button>
+            </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>

@@ -348,8 +348,8 @@ const HistoryPage = () => {
                 </div>
 
                 {/* Model Performance Metrics */}
-                <div className="pt-6 border-t border-gray-200">
-                  <h3 className="text-lg font-semibold mb-4 flex items-center gap-2 text-gray-900">
+                <div className="pt-3 border-t border-gray-200">
+                  <h3 className="text-lg font-semibold mb-3 flex items-center gap-2">
                     <Award className="h-5 w-5" />
                     Model Performance Metrics
                   </h3>
