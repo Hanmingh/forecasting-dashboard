@@ -51,6 +51,10 @@ export function RegisterForm({ className, ...props }: RegisterFormProps) {
     <div className={cn('flex flex-col gap-6', className)} {...props}>
       <Card>
         <CardHeader>
+          <div className="flex flex-col items-center mb-6">
+            <img src={'./logo.png'} className="h-16 drop-shadow-md" alt="Fuelture Logo"/>
+            <span className="bg-gradient-to-r from-[#61adde] to-[#4670bc] bg-clip-text text-transparent font-bold text-2xl tracking-wide mt-2">FUELTURE</span>
+          </div>
           <CardTitle className="text-2xl">Register</CardTitle>
           <CardDescription>Create your account</CardDescription>
         </CardHeader>
