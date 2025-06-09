@@ -32,29 +32,28 @@ const PredictionChart: React.FC<PredictionChartProps> = ({
 
     // Create chart data points
     const forecastPoints = sortedForecasts.map((forecast) => {
-      // Use residual_std for confidence bands, fallback to residual_mean_abs, then MAE from accuracy
-      let confidenceValue = 0;
+      // Use predicted_upper and predicted_lower from bootstrap confidence intervals
+      let lowerBound = forecast.predicted_value;
+      let upperBound = forecast.predicted_value;
       
-      if (forecast.residual_std !== null && forecast.residual_std !== undefined) {
-        confidenceValue = forecast.residual_std;
-      } else if (forecast.residual_mean_abs !== null && forecast.residual_mean_abs !== undefined) {
-        confidenceValue = forecast.residual_mean_abs;
+      if (forecast.predicted_upper !== null && forecast.predicted_upper !== undefined &&
+          forecast.predicted_lower !== null && forecast.predicted_lower !== undefined) {
+        lowerBound = forecast.predicted_lower;
+        upperBound = forecast.predicted_upper;
       } else {
-        // Fallback to accuracy MAE
+        // Fallback to accuracy MAE if confidence intervals not available
         const acc = accuracy.find((a) => a.n_days_ahead === forecast.n_days_ahead);
-        confidenceValue = acc?.mae || 0;
+        const confidenceValue = acc?.mae || 0;
+        lowerBound = forecast.predicted_value - confidenceValue;
+        upperBound = forecast.predicted_value + confidenceValue;
       }
-
-      // Calculate confidence bands (±1 standard deviation or mean absolute error)
-      const lowerBound = forecast.predicted_value - confidenceValue;
-      const upperBound = forecast.predicted_value + confidenceValue;
 
       return {
         date: forecast.predicted_date,
         value: forecast.predicted_value,
         lowerBound,
         upperBound,
-        confidenceWidth: confidenceValue * 2, // Total width of confidence band
+        confidenceWidth: upperBound - lowerBound, // Total width of confidence band
         min: lowerBound, // For area chart
         daysAhead: forecast.n_days_ahead,
       };
@@ -170,7 +169,7 @@ const PredictionChart: React.FC<PredictionChartProps> = ({
         
         <Tooltip content={<CustomTooltip />} />
 
-        {/* Confidence band area */}
+        {/* Confidence band area (95% bootstrap confidence intervals) */}
         <Area 
           dataKey="lowerBound" 
           stackId="confidence"

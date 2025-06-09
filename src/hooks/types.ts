@@ -6,8 +6,8 @@ export interface Forecast {
   n_days_ahead: number;
   predicted_date: string;
   predicted_value: number;
-  residual_std?: number | null;
-  residual_mean_abs?: number | null;
+  predicted_upper?: number | null;
+  predicted_lower?: number | null;
   model_version?: string | null;
 }
 

@@ -12,13 +12,14 @@ import { useMemo } from "react";
 const OilPage = () => {
   const { symbol } = useParams<{ symbol: string }>();
 
-  // Get all forecasts for this product to find the latest date
+  const current_day = '2025-01-08'
+  // Get latest forecasts for this product - optimized query
   const {
     data: allForecasts = [],
     isLoading: isForecastLoading,
     isError: isForecastError,
     error: forecastError,
-  } = useForecast({ product: symbol });
+  } = useForecast({ product: symbol, current_date: current_day });
 
   const {
     data: accuracyData = [],
@@ -27,24 +28,17 @@ const OilPage = () => {
     error: accuracyError,
   } = useAccuracy({ product: symbol });
 
-  // Process data to get latest forecasts and statistics
+  // Process data to get statistics (data is already filtered for latest date)
   const { latestForecasts, currentValue, latestDate, forecastStats } = useMemo(() => {
     if (allForecasts.length === 0) {
       return { latestForecasts: [], currentValue: 0, latestDate: '', forecastStats: { total: 0, avgChange: 0, maxDays: 0 } };
     }
 
-    // Find the latest current_date for this product
-    const latestDate = allForecasts.reduce((latest, forecast) => {
-      return forecast.current_date > latest ? forecast.current_date : latest;
-    }, allForecasts[0].current_date);
-
-    // Get all forecasts for the latest date
-    const latestForecasts = allForecasts.filter(f => f.current_date === latestDate);
-    
-    // Sort by n_days_ahead
-    latestForecasts.sort((a, b) => a.n_days_ahead - b.n_days_ahead);
+    // Data is already filtered for the specific date, just sort by n_days_ahead
+    const latestForecasts = [...allForecasts].sort((a, b) => a.n_days_ahead - b.n_days_ahead);
 
     const currentValue = latestForecasts[0]?.current_value || 0;
+    const latestDate = latestForecasts[0]?.current_date || '';
     
     // Calculate statistics
     const totalForecasts = latestForecasts.length;
@@ -116,7 +110,10 @@ const OilPage = () => {
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-3xl font-bold">{symbol}</h1>
-          <p className="text-gray-600">Commodity Price Forecasts</p>
+          <p className="text-gray-600">
+            Commodity Price Forecasts
+            <span className="ml-2 text-sm text-gray-500">Updated at {current_day}</span>
+          </p>
         </div>
         <div className="text-right">
           <div className="text-2xl font-bold">${currentValue.toFixed(2)}</div>
@@ -192,7 +189,7 @@ const OilPage = () => {
         <CardHeader>
           <CardTitle>60-Day Price Forecast with Confidence Bands</CardTitle>
           <CardDescription>
-            Predicted prices with uncertainty ranges based on model residuals
+            Predicted prices with 95% confidence intervals from bootstrap predictions
           </CardDescription>
         </CardHeader>
         <CardContent>
@@ -229,7 +226,9 @@ const OilPage = () => {
               {latestForecasts.map((forecast) => {
                 const changePercent = ((forecast.predicted_value - currentValue) / currentValue) * 100;
                 const changeAbsolute = forecast.predicted_value - currentValue;
-                const confidenceValue = forecast.residual_std || forecast.residual_mean_abs || 0;
+                const confidenceValue = forecast.predicted_upper && forecast.predicted_lower 
+                  ? (forecast.predicted_upper - forecast.predicted_lower) / 2 
+                  : 0;
                 
                 return (
                   <TableRow key={forecast.n_days_ahead}>

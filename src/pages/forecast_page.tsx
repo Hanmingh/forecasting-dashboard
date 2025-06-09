@@ -17,7 +17,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Terminal, ChevronUp, ChevronDown } from "lucide-react";
 import { useNavigate } from "react-router-dom";
-import { useForecast, formatPrediction } from "@/hooks/use-forecasts";
+import { useForecast, useLatestForecasts, formatPrediction } from "@/hooks/use-forecasts";
 import { useMemo, useState } from "react";
 import type { Forecast } from "@/hooks/types";
 import { Slider } from "@/components/ui/slider";
@@ -59,8 +59,13 @@ interface RowData {
 }
 
 const ForecastPage = () => {
-  // Get all forecasts without date filtering
-  const { data: allForecasts = [], isLoading, isError, error } = useForecast({});
+  // Get latest forecasts for each product - optimized query
+  //const { data: latestForecasts = [], isLoading, isError, error } = useLatestForecasts();
+
+  const current_day = '2025-01-08'
+  const { data: latestForecasts = [], isLoading, isError, error } = useForecast({current_date: current_day});
+  // Just for demonstration, remove this when we have the latest forecasts query working
+
   const navigate = useNavigate();
   const [selectedDays, setSelectedDays] = useState(20);
   const [sortKey, setSortKey] = useState<SortKey>('product');
@@ -91,44 +96,30 @@ const ForecastPage = () => {
     </TableHead>
   );
 
-  const { latestForecasts, productStats } = useMemo(() => {
-    if (allForecasts.length === 0) return { latestForecasts: [], productStats: {} };
+  const productStats = useMemo(() => {
+    if (latestForecasts.length === 0) return {};
 
-    // Group forecasts by product
+    // Group forecasts by product to calculate stats
     const byProduct: Record<string, Forecast[]> = {};
-    allForecasts.forEach((forecast) => {
+    latestForecasts.forEach((forecast) => {
       if (!byProduct[forecast.product]) {
         byProduct[forecast.product] = [];
       }
       byProduct[forecast.product].push(forecast);
     });
 
-    // For each product, find the latest current_date and get all forecasts for that date
-    const latestForecasts: Forecast[] = [];
-    const productStats: Record<string, { latestDate: string; forecastCount: number }> = {};
-
+    // Calculate stats for each product
+    const stats: Record<string, { latestDate: string; forecastCount: number }> = {};
     Object.keys(byProduct).forEach((product) => {
       const productForecasts = byProduct[product];
-      
-      // Find the latest current_date for this product
-      const latestDate = productForecasts.reduce((latest, forecast) => {
-        return forecast.current_date > latest ? forecast.current_date : latest;
-      }, productForecasts[0].current_date);
-
-      // Get all forecasts for this product on the latest date
-      const latestProductForecasts = productForecasts.filter(
-        (forecast) => forecast.current_date === latestDate
-      );
-
-      latestForecasts.push(...latestProductForecasts);
-      productStats[product] = {
-        latestDate,
-        forecastCount: latestProductForecasts.length
+      stats[product] = {
+        latestDate: productForecasts[0].current_date, // All should have the same latest date
+        forecastCount: productForecasts.length
       };
     });
 
-    return { latestForecasts, productStats };
-  }, [allForecasts]);
+    return stats;
+  }, [latestForecasts]);
 
   const rows = useMemo(() => {
     const byProduct: Record<string, Forecast[]> = {}
@@ -198,7 +189,7 @@ const ForecastPage = () => {
 
     rows.forEach(row => {
       // Calculate return for selected days
-      const forecastData = latestForecasts.find(f => 
+      const forecastData = latestForecasts.find((f: Forecast) => 
         f.product === row.product && f.n_days_ahead === selectedDays
       );
       
@@ -395,7 +386,10 @@ const ForecastPage = () => {
 
       <Card className="flex-1">
         <CardHeader>
-          <CardTitle>Fuel Product Forecasts</CardTitle>
+          <div className="flex items-center justify-between">
+            <CardTitle>Fuel Product Forecasts</CardTitle>
+            <span className="text-sm text-gray-500">Updated at {current_day}</span>
+          </div>
         </CardHeader>
         <CardContent>
           <div className="overflow-x-auto">

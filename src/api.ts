@@ -52,15 +52,20 @@ api.interceptors.response.use(
   }
 );
 
-export async function getForecast(product?: string, days?: 1|5|10|15|20, current_date?: string, predicted_date?: string  /*'YYYY-MM-DD'*/, head?:number): Promise<Forecast[]> {
+export async function getForecast(product?: string, n_days_ahead?: number, current_date?: string, predicted_date?: string  /*'YYYY-MM-DD'*/, head?:number): Promise<Forecast[]> {
   const res = await api.get<Forecast[]>('/forecast', {
-    params: { product, days, current_date, predicted_date, head }
+    params: { product, n_days_ahead, current_date, predicted_date, head }
   })
   return res.data
 }
 
-export async function getAccuracy(product?: string, days?: 1|5|10|15|20) {
-  const res = await api.get('/accuracy', { params: { product, days } })
+export async function getLatestForecasts(): Promise<Forecast[]> {
+  const res = await api.get<Forecast[]>('/forecast/latest')
+  return res.data
+}
+
+export async function getAccuracy(product?: string, n_days_ahead?: number) {
+  const res = await api.get('/accuracy', { params: { product, n_days_ahead } })
   return res.data
 }
 
