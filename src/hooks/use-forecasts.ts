@@ -1,6 +1,6 @@
 import { useQuery, UseQueryOptions, useQueries, UseQueryResult } from '@tanstack/react-query'
-import { getForecast, getLatestForecasts, getUniqueProducts, getProductDateRange } from '@/api'
-import type { Forecast } from './types.ts'
+import { getForecast, getLatestForecasts, getUniqueProducts, getProductDateRange, getAccuracy } from '@/api'
+import type { Forecast, Accuracy } from './types.ts'
 
 // Helper Functions
 export function formatPrediction(value?: number | null): string {
@@ -62,6 +62,21 @@ export function useProductDateRange(
   return useQuery<{ earliest_date: string; latest_date: string }, Error>({
     queryKey: ['product-date-range', product] as const,
     queryFn: () => getProductDateRange(product),
+    enabled: !!product, // Only run query when product is provided
+    staleTime: 1000 * 60 * 10, // 10 minutes
+    refetchOnWindowFocus: false,
+    ...queryOptions,
+  })
+}
+
+export function useAccuracy(
+  product?: string,
+  n_days_ahead?: number,
+  queryOptions?: UseQueryOptions<Accuracy[], Error>
+) {
+  return useQuery<Accuracy[], Error>({
+    queryKey: ['accuracy', product, n_days_ahead] as const,
+    queryFn: () => getAccuracy(product, n_days_ahead),
     enabled: !!product, // Only run query when product is provided
     staleTime: 1000 * 60 * 10, // 10 minutes
     refetchOnWindowFocus: false,

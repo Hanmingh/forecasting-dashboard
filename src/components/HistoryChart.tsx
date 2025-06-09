@@ -125,10 +125,7 @@ const HistoryChart: React.FC<HistoryChartProps> = ({
               Accuracy: {accuracy}%
             </p>
             <p className="text-gray-500 text-sm">
-              {data.daysAhead} days ahead forecast
-            </p>
-            <p className="text-gray-500 text-sm">
-              Made on: {new Date(data.currentDate).toLocaleDateString()}
+              Forecasted on: {new Date(data.currentDate).toLocaleDateString()}
             </p>
           </div>
         </div>

@@ -87,13 +87,13 @@ const Homepage = () => {
         </Card>
       ) : (
         <Card className="border-0 shadow-xl bg-gradient-to-br from-[#61adde]/5 to-[#99b6c4]/5">
-          <CardHeader className="pb-4 bg-gradient-to-r rounded-t-lg">
+          <CardHeader className="bg-gradient-to-r rounded-t-lg">
             <CardTitle className="flex items-center gap-3 text-lg">
               <Star className="h-6 w-6 fill-white" />
               Favorites
             </CardTitle>
-        </CardHeader>
-          <CardContent className="pt-6 space-y-4">
+          </CardHeader>
+          <CardContent className="pace-y-4">
             {/* Favorite Products Grid */}
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
               {favorites.map(favorite => {
@@ -105,7 +105,7 @@ const Homepage = () => {
                   : null;
 
                 return (
-                  <div key={favorite.product} className="bg-white rounded-lg p-4 shadow-md border border-[#99b6c4]/20 hover:shadow-lg transition-shadow">
+                  <div key={favorite.product} className="rounded-lg p-4 shadow-md border border-[#99b6c4]/20 hover:shadow-lg transition-shadow">
                     <div className="flex items-center justify-between mb-3">
                       <h3 className="font-semibold text-sm text-[#4670bc]">{favorite.product}</h3>
                       <Button
