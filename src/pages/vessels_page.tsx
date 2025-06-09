@@ -134,7 +134,6 @@ const VesselsPage: React.FC = () => {
           <h1 className="text-3xl font-bold bg-gradient-to-r from-[#61adde] to-[#4670bc] bg-clip-text text-transparent">
             Fleet Management
           </h1>
-          <p className="text-[#99b6c4] mt-2">Manage your vessel fleet and monitor operations</p>
         </div>
         <div className="flex gap-3">
           <Button

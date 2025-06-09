@@ -6,16 +6,24 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
+import { Switch } from "@/components/ui/switch";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useColorPreferences } from '@/hooks/use-color-preferences';
+import { useTheme } from '@/components/ui/theme-provider';
+import { Monitor, Moon, Sun, TrendingUp, TrendingDown } from 'lucide-react';
 
 const SettingsPage: React.FC = () => {
   const { getUpColor, getDownColor, updateColorScheme, isTraditional } = useColorPreferences();
+  const { theme, setTheme } = useTheme();
 
-  const colorSchemes = [
-    { name: 'Traditional (Green Up, Red Down)', scheme: 'traditional' as const },
-    { name: 'Inverted (Red Up, Green Down)', scheme: 'inverted' as const },
-  ];
+  const getThemeIcon = (themeValue: string) => {
+    switch (themeValue) {
+      case 'light': return <Sun className="h-4 w-4" />;
+      case 'dark': return <Moon className="h-4 w-4" />;
+      case 'system': return <Monitor className="h-4 w-4" />;
+      default: return <Monitor className="h-4 w-4" />;
+    }
+  };
 
   return (
     <div className="space-y-6">
@@ -24,60 +32,80 @@ const SettingsPage: React.FC = () => {
         <h1 className="text-3xl font-bold bg-gradient-to-r from-[#61adde] to-[#4670bc] bg-clip-text text-transparent">
           Settings
         </h1>
-        <p className="text-muted-foreground mt-2">Customize your forecasting dashboard experience</p>
       </div>
 
-      {/* Color Preferences */}
+      {/* Combined Settings */}
       <Card>
         <CardHeader>
-          <CardTitle>Color Preferences</CardTitle>
+          <CardTitle>Preferences</CardTitle>
           <CardDescription>
-            Choose your preferred color scheme for positive and negative price changes
+            Customize your dashboard appearance and behavior
           </CardDescription>
         </CardHeader>
-        <CardContent>
-          <div className="space-y-4">
-            <div className="text-sm font-medium mb-3">Current Colors:</div>
-            <div className="flex items-center gap-4 mb-6">
-              <div className="flex items-center gap-2">
-                <span className="text-sm">Positive:</span>
-                <span className={`font-bold ${getUpColor()}`}>+2.50% ↗</span>
-              </div>
-              <div className="flex items-center gap-2">
-                <span className="text-sm">Negative:</span>
-                <span className={`font-bold ${getDownColor()}`}>-1.80% ↘</span>
+        <CardContent className="space-y-6">
+          {/* Color Scheme Setting */}
+          <div className="flex items-center justify-between">
+            <div className="space-y-1">
+              <div className="text-sm font-medium">Color Scheme</div>
+              <div className="text-xs text-muted-foreground flex items-center gap-4">
+                <div className="flex items-center gap-1">
+                  <TrendingUp className="h-3 w-3" />
+                  <span className={`font-medium ${getUpColor()}`}>
+                    {isTraditional() ? 'Green Up' : 'Red Up'}
+                  </span>
+                </div>
+                <div className="flex items-center gap-1">
+                  <TrendingDown className="h-3 w-3" />
+                  <span className={`font-medium ${getDownColor()}`}>
+                    {isTraditional() ? 'Red Down' : 'Green Down'}
+                  </span>
+                </div>
               </div>
             </div>
-            
-            <div className="space-y-3">
-              {colorSchemes.map((option, index) => (
-                <Button
-                  key={index}
-                  variant={isTraditional() === (option.scheme === 'traditional') ? "default" : "outline"}
-                  onClick={() => updateColorScheme(option.scheme)}
-                  className="justify-start h-auto p-4 w-full"
-                >
-                  <div className="flex items-center gap-4">
-                    <span className="text-sm">{option.name}</span>
-                    <div className="flex gap-2">
-                      {option.scheme === 'traditional' ? (
-                        <>
-                          <span className="text-green-600 font-bold">+2.5%</span>
-                          <span>/</span>
-                          <span className="text-red-600 font-bold">-2.5%</span>
-                        </>
-                      ) : (
-                        <>
-                          <span className="text-red-600 font-bold">+2.5%</span>
-                          <span>/</span>
-                          <span className="text-green-600 font-bold">-2.5%</span>
-                        </>
-                      )}
-                    </div>
+            <div className="flex items-center gap-2">
+              <span className="text-xs text-muted-foreground">Traditional</span>
+              <Switch
+                checked={!isTraditional()}
+                onCheckedChange={(checked) => updateColorScheme(checked ? 'inverted' : 'traditional')}
+              />
+              <span className="text-xs text-muted-foreground">Inverted</span>
+            </div>
+          </div>
+
+          {/* Theme Setting */}
+          <div className="flex items-center justify-between">
+            <div className="space-y-1">
+              <div className="text-sm font-medium">Theme</div>
+              <div className="text-xs text-muted-foreground flex items-center gap-2">
+                {getThemeIcon(theme)}
+                <span className="capitalize">{theme}</span>
+              </div>
+            </div>
+            <Select value={theme} onValueChange={setTheme}>
+              <SelectTrigger className="w-32">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="light">
+                  <div className="flex items-center gap-2">
+                    <Sun className="h-4 w-4" />
+                    Light
                   </div>
-                </Button>
-              ))}
-            </div>
+                </SelectItem>
+                <SelectItem value="dark">
+                  <div className="flex items-center gap-2">
+                    <Moon className="h-4 w-4" />
+                    Dark
+                  </div>
+                </SelectItem>
+                <SelectItem value="system">
+                  <div className="flex items-center gap-2">
+                    <Monitor className="h-4 w-4" />
+                    System
+                  </div>
+                </SelectItem>
+              </SelectContent>
+            </Select>
           </div>
         </CardContent>
       </Card>

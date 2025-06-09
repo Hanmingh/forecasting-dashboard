@@ -152,7 +152,6 @@ const RoutePage: React.FC = () => {
       <div className="flex justify-between items-center">
         <div>
           <h1 className="text-3xl font-bold bg-gradient-to-r from-[#61adde] to-[#4670bc] bg-clip-text text-transparent">Route Management</h1>
-          <p className="text-[#99b6c4] mt-2">Plan, monitor and manage shipping routes</p>
         </div>
         <Button
           onClick={() => {
@@ -194,9 +193,9 @@ const RoutePage: React.FC = () => {
                   onClick={() => setSelectedRouteForMap(selectedRouteForMap === route.id ? undefined : route.id)}
                 >
                   <CardHeader className="pb-2">
-                    <div className="flex justify-between items-start">
-                      <div className="flex-1 min-w-0">
-                        <CardTitle className="text-sm truncate">
+                    <div className="space-y-1">
+                      <div className="flex items-center justify-between">
+                        <CardTitle className="text-sm font-semibold text-[#4670bc] truncate">
                           {vessels.find(v => v.id === route.vessel_id)?.vessel_name || `Vessel ${route.vessel_id}`}
                         </CardTitle>
                         <Badge 
@@ -207,7 +206,7 @@ const RoutePage: React.FC = () => {
                               ? 'secondary'
                               : 'outline'
                           }
-                          className="mt-1"
+                          className="text-xs"
                         >
                           {route.current_latitude && route.current_longitude
                             ? 'En Route'
@@ -217,33 +216,23 @@ const RoutePage: React.FC = () => {
                           }
                         </Badge>
                       </div>
+                      <div className="text-xs text-muted-foreground">
+                        {ports.find(p => p.id === route.departure_port_id)?.port_name || `Port ${route.departure_port_id}`} → {ports.find(p => p.id === route.arrival_port_id)?.port_name || `Port ${route.arrival_port_id}`}
+                      </div>
                     </div>
                   </CardHeader>
-                  <CardContent className="space-y-2">
-                    <div className="text-xs">
-                      <strong>From:</strong> {ports.find(p => p.id === route.departure_port_id)?.port_name || `Port ${route.departure_port_id}`}
+                  <CardContent className="pt-0 space-y-2">
+                    <div className="text-xs text-muted-foreground">
+                      {new Date(route.scheduled_departure).toLocaleDateString()} → {new Date(route.estimated_arrival).toLocaleDateString()}
                     </div>
-                    <div className="text-xs">
-                      <strong>To:</strong> {ports.find(p => p.id === route.arrival_port_id)?.port_name || `Port ${route.arrival_port_id}`}
-                    </div>
-                    <div className="grid grid-cols-2 gap-2 text-xs">
-                      <div>
-                        <span className="text-muted-foreground">Departure:</span>
-                        <div className="font-medium">{new Date(route.scheduled_departure).toLocaleDateString()}</div>
-                      </div>
-                      <div>
-                        <span className="text-muted-foreground">Arrival:</span>
-                        <div className="font-medium">{new Date(route.estimated_arrival).toLocaleDateString()}</div>
-                      </div>
-                    </div>
-                    <div className="flex gap-2 pt-2">
+                    <div className="flex gap-1">
                       <Button
                         onClick={(e) => {
                           e.stopPropagation();
                           handleEdit(route);
                         }}
                         size="sm"
-                        className="flex-1 bg-[#61adde] hover:bg-[#4670bc]"
+                        className="flex-1 bg-[#61adde] hover:bg-[#4670bc] text-xs py-1"
                       >
                         Edit
                       </Button>
@@ -254,7 +243,7 @@ const RoutePage: React.FC = () => {
                         }}
                         size="sm"
                         variant="destructive"
-                        className="flex-1"
+                        className="flex-1 text-xs py-1"
                       >
                         Delete
                       </Button>
@@ -268,10 +257,10 @@ const RoutePage: React.FC = () => {
                 className="border-dashed cursor-pointer hover:bg-muted/50 transition-colors"
                 onClick={handleCreateNewRoute}
               >
-                <CardContent className="flex items-center justify-center h-[180px]">
+                <CardContent className="flex items-center justify-center h-[100px]">
                   <div className="text-center">
-                    <PlusCircle className="h-8 w-8 mx-auto mb-2 text-[#61adde]" />
-                    <p className="text-muted-foreground text-sm">Add New Route</p>
+                    <PlusCircle className="h-5 w-5 mx-auto mb-1 text-[#61adde]" />
+                    <p className="text-muted-foreground text-xs">Add New Route</p>
                   </div>
                 </CardContent>
               </Card>
