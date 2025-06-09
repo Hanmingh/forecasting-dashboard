@@ -15,6 +15,7 @@ import Register from './pages/Register';
 import ProtectedRoute from './components/ProtectedRoute';
 import Layout from './components/layout';
 import RoutePage from './pages/route_page';
+import VesselsPage from './pages/vessels_page';
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -46,6 +47,7 @@ function App() {
               <Route path="forecast" element={<ForecastPage />} />
               <Route path="history"  element={<HistoryPage />} />
               <Route path="route"    element={<RoutePage />} />
+              <Route path="vessels"  element={<VesselsPage />} />
               <Route path="insights" element={<InsightsPage />} />
               <Route path="inbox"    element={<InboxPage />} />
               <Route path="setting"  element={<SettingPage />} />

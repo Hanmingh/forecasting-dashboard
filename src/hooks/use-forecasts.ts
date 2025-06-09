@@ -1,5 +1,5 @@
 import { useQuery, UseQueryOptions, useQueries, UseQueryResult } from '@tanstack/react-query'
-import { getForecast, getLatestForecasts } from '@/api'
+import { getForecast, getLatestForecasts, getUniqueProducts, getProductDateRange } from '@/api'
 import type { Forecast } from './types.ts'
 
 // Helper Functions
@@ -38,6 +38,32 @@ export function useLatestForecasts(
     queryKey: ['latest-forecasts'] as const,
     queryFn: getLatestForecasts,
     staleTime: 1000 * 60 * 5, // 5 minutes
+    refetchOnWindowFocus: false,
+    ...queryOptions,
+  })
+}
+
+export function useUniqueProducts(
+  queryOptions?: UseQueryOptions<string[], Error>
+) {
+  return useQuery<string[], Error>({
+    queryKey: ['unique-products'] as const,
+    queryFn: getUniqueProducts,
+    staleTime: 1000 * 60 * 10, // 10 minutes (products don't change often)
+    refetchOnWindowFocus: false,
+    ...queryOptions,
+  })
+}
+
+export function useProductDateRange(
+  product: string,
+  queryOptions?: UseQueryOptions<{ earliest_date: string; latest_date: string }, Error>
+) {
+  return useQuery<{ earliest_date: string; latest_date: string }, Error>({
+    queryKey: ['product-date-range', product] as const,
+    queryFn: () => getProductDateRange(product),
+    enabled: !!product, // Only run query when product is provided
+    staleTime: 1000 * 60 * 10, // 10 minutes
     refetchOnWindowFocus: false,
     ...queryOptions,
   })

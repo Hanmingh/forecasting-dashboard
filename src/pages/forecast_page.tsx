@@ -15,9 +15,11 @@ import {
 } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
-import { Terminal, ChevronUp, ChevronDown } from "lucide-react";
+import { Terminal, ChevronUp, ChevronDown, Star } from "lucide-react";
 import { useNavigate } from "react-router-dom";
-import { useForecast, useLatestForecasts, formatPrediction } from "@/hooks/use-forecasts";
+import { useForecast, /*useLatestForecasts,*/ } from "@/hooks/use-forecasts";
+import { useFavorites } from "@/hooks/use-favorites";
+import { useColorPreferences } from "@/hooks/use-color-preferences";
 import { useMemo, useState } from "react";
 import type { Forecast } from "@/hooks/types";
 import { Slider } from "@/components/ui/slider";
@@ -67,6 +69,8 @@ const ForecastPage = () => {
   // Just for demonstration, remove this when we have the latest forecasts query working
 
   const navigate = useNavigate();
+  const { isFavorite, toggleFavorite } = useFavorites();
+  const { getUpColor, getDownColor, getUpColorHex, getDownColorHex } = useColorPreferences();
   const [selectedDays, setSelectedDays] = useState(20);
   const [sortKey, setSortKey] = useState<SortKey>('product');
   const [sortDirection, setSortDirection] = useState<SortDirection>('asc');
@@ -96,30 +100,7 @@ const ForecastPage = () => {
     </TableHead>
   );
 
-  const productStats = useMemo(() => {
-    if (latestForecasts.length === 0) return {};
 
-    // Group forecasts by product to calculate stats
-    const byProduct: Record<string, Forecast[]> = {};
-    latestForecasts.forEach((forecast) => {
-      if (!byProduct[forecast.product]) {
-        byProduct[forecast.product] = [];
-      }
-      byProduct[forecast.product].push(forecast);
-    });
-
-    // Calculate stats for each product
-    const stats: Record<string, { latestDate: string; forecastCount: number }> = {};
-    Object.keys(byProduct).forEach((product) => {
-      const productForecasts = byProduct[product];
-      stats[product] = {
-        latestDate: productForecasts[0].current_date, // All should have the same latest date
-        forecastCount: productForecasts.length
-      };
-    });
-
-    return stats;
-  }, [latestForecasts]);
 
   const rows = useMemo(() => {
     const byProduct: Record<string, Forecast[]> = {}
@@ -286,7 +267,7 @@ const ForecastPage = () => {
                           );
                           return sum + (forecastData?.predicted_value ? 
                             ((forecastData.predicted_value - row.currentValue) / row.currentValue) * 100 : 0);
-                        }, 0) / rows.length >= 0 ? 'text-green-600' : 'text-red-600') : ''
+                        }, 0) / rows.length >= 0 ? getUpColor() : getDownColor()) : ''
                     }`}>
                       {gainersLosers.total > 0 && rows.length > 0 ? 
                         `${(rows.reduce((sum, row) => {
@@ -301,17 +282,17 @@ const ForecastPage = () => {
                   </div>
                   <div className="flex justify-between">
                     <span>Bullish Products:</span>
-                    <span className="text-green-600 font-medium">{gainersLosers.gainers}</span>
+                    <span className={`${getUpColor()} font-medium`}>{gainersLosers.gainers}</span>
                   </div>
                   <div className="flex justify-between">
                     <span>Bearish Products:</span>
-                    <span className="text-red-600 font-medium">{gainersLosers.losers}</span>
+                    <span className={`${getDownColor()} font-medium`}>{gainersLosers.losers}</span>
                   </div>
                   <div className="flex justify-between">
                     <span>Market Sentiment:</span>
                     <span className={`font-medium ${
-                      gainersLosers.gainers > gainersLosers.losers ? 'text-green-600' : 
-                      gainersLosers.losers > gainersLosers.gainers ? 'text-red-600' : 'text-gray-600'
+                      gainersLosers.gainers > gainersLosers.losers ? getUpColor() : 
+                      gainersLosers.losers > gainersLosers.gainers ? getDownColor() : 'text-gray-600'
                     }`}>
                       {gainersLosers.gainers > gainersLosers.losers ? 'Bullish' : 
                        gainersLosers.losers > gainersLosers.gainers ? 'Bearish' : 'Neutral'}
@@ -330,10 +311,11 @@ const ForecastPage = () => {
                   {returnDistribution.slice(0, 10).map((item, index) => (
                     <div key={index} className="flex flex-col items-center h-full justify-end">
                       <div 
-                        className={`w-3 rounded-t ${
-                          item.bin >= 0 ? 'bg-green-500' : 'bg-red-500'
-                        }`}
-                        style={{ height: `${Math.min(Math.max(item.percentage * 4, 2), 75)}%` }}
+                        className="w-3 rounded-t"
+                        style={{ 
+                          height: `${Math.min(Math.max(item.percentage * 4, 2), 75)}%`,
+                          backgroundColor: item.bin >= 0 ? getUpColorHex() : getDownColorHex()
+                        }}
                       />
                       <span className="text-xs mt-1 text-center w-8">
                         {item.bin >= 0 ? '+' : ''}{item.bin}%
@@ -349,32 +331,38 @@ const ForecastPage = () => {
                 <div className="flex-1 flex flex-col justify-center">
                   <div className="w-full bg-gray-200 rounded-full h-2 flex overflow-hidden">
                     <div 
-                      className="bg-red-500 h-full" 
-                      style={{ width: `${gainersLosers.total > 0 ? (gainersLosers.losers / gainersLosers.total) * 100 : 33.33}%` }}
+                      className="h-full" 
+                      style={{ 
+                        width: `${gainersLosers.total > 0 ? (gainersLosers.losers / gainersLosers.total) * 100 : 33.33}%`,
+                        backgroundColor: getDownColorHex()
+                      }}
                     />
                     <div 
                       className="bg-gray-400 h-full" 
                       style={{ width: `${gainersLosers.total > 0 ? (gainersLosers.neutral / gainersLosers.total) * 100 : 33.33}%` }}
                     />
                     <div 
-                      className="bg-green-500 h-full" 
-                      style={{ width: `${gainersLosers.total > 0 ? (gainersLosers.gainers / gainersLosers.total) * 100 : 33.33}%` }}
+                      className="h-full" 
+                      style={{ 
+                        width: `${gainersLosers.total > 0 ? (gainersLosers.gainers / gainersLosers.total) * 100 : 33.33}%`,
+                        backgroundColor: getUpColorHex()
+                      }}
                     />
                   </div>
                   
                   {/* Labels positioned below the line */}
                   <div className="flex justify-between items-center mt-2 text-xs">
                     <div className="flex flex-col items-start">
-                      <span className="text-red-600 font-bold text-lg">{gainersLosers.losers}</span>
-                      <span className="text-red-600">Bearish</span>
+                      <span className={`${getDownColor()} font-bold text-lg`}>{gainersLosers.losers}</span>
+                      <span className={getDownColor()}>Bearish</span>
                     </div>
                     <div className="flex flex-col items-center">
                       <span className="text-gray-600 font-bold text-lg">{gainersLosers.neutral}</span>
                       <span>Neutral</span>
                     </div>
                     <div className="flex flex-col items-end">
-                      <span className="text-green-600 font-bold text-lg">{gainersLosers.gainers}</span>
-                      <span className="text-green-600">Bullish</span>
+                      <span className={`${getUpColor()} font-bold text-lg`}>{gainersLosers.gainers}</span>
+                      <span className={getUpColor()}>Bullish</span>
                     </div>
                   </div>
                 </div>
@@ -422,89 +410,104 @@ const ForecastPage = () => {
                     className="cursor-pointer hover:bg-gray-50"
                   onClick={() => navigate(`/${r.product}`)}
                 >
-                  <TableCell className="font-medium">{r.product}</TableCell>
+                  <TableCell className="font-medium">
+                    <div className="flex items-center gap-2">
+                      <Star
+                        className={`h-4 w-4 cursor-pointer ${
+                          isFavorite(r.product) 
+                            ? 'fill-yellow-400 text-yellow-400' 
+                            : 'text-gray-300 hover:text-yellow-400'
+                        }`}
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          toggleFavorite(r.product);
+                        }}
+                      />
+                      {r.product}
+                    </div>
+                  </TableCell>
                     <TableCell className="font-medium">${r.currentValue.toFixed(2)}</TableCell>
                     
                     {/* 1-DAY */}
                     <TableCell className={`text-right font-medium ${
-                      r.price1 !== null ? (r.price1 >= r.currentValue ? 'text-green-600' : 'text-red-600') : ''
+                      r.price1 !== null ? (r.price1 >= r.currentValue ? getUpColor() : getDownColor()) : ''
                     }`}>
                       {r.price1 ? `$${formatPrice(r.price1)}` : '-'}
                     </TableCell>
                     <TableCell className={`text-right font-medium ${
-                      r.change1 !== null ? (r.change1 >= 0 ? 'text-green-600' : 'text-red-600') : ''
+                      r.change1 !== null ? (r.change1 >= 0 ? getUpColor() : getDownColor()) : ''
                     }`}>
                       {r.change1 !== null ? `${r.change1 >= 0 ? '+' : ''}${r.change1.toFixed(2)}%` : '-'}
                     </TableCell>
                     
                     {/* 5-DAY */}
                     <TableCell className={`text-right font-medium ${
-                      r.price5 !== null ? (r.price5 >= r.currentValue ? 'text-green-600' : 'text-red-600') : ''
+                      r.price5 !== null ? (r.price5 >= r.currentValue ? getUpColor() : getDownColor()) : ''
                     }`}>
                       {r.price5 ? `$${formatPrice(r.price5)}` : '-'}
                     </TableCell>
                     <TableCell className={`text-right font-medium ${
-                      r.change5 !== null ? (r.change5 >= 0 ? 'text-green-600' : 'text-red-600') : ''
+                      r.change5 !== null ? (r.change5 >= 0 ? getUpColor() : getDownColor()) : ''
                     }`}>
                       {r.change5 !== null ? `${r.change5 >= 0 ? '+' : ''}${r.change5.toFixed(2)}%` : '-'}
                     </TableCell>
                     
                     {/* 10-DAY */}
                     <TableCell className={`text-right font-medium ${
-                      r.price10 !== null ? (r.price10 >= r.currentValue ? 'text-green-600' : 'text-red-600') : ''
+                      r.price10 !== null ? (r.price10 >= r.currentValue ? getUpColor() : getDownColor()) : ''
                     }`}>
                       {r.price10 ? `$${formatPrice(r.price10)}` : '-'}
                     </TableCell>
                     <TableCell className={`text-right font-medium ${
-                      r.change10 !== null ? (r.change10 >= 0 ? 'text-green-600' : 'text-red-600') : ''
+                      r.change10 !== null ? (r.change10 >= 0 ? getUpColor() : getDownColor()) : ''
                     }`}>
                       {r.change10 !== null ? `${r.change10 >= 0 ? '+' : ''}${r.change10.toFixed(2)}%` : '-'}
                     </TableCell>
                     
                     {/* 15-DAY */}
                     <TableCell className={`text-right font-medium ${
-                      r.price15 !== null ? (r.price15 >= r.currentValue ? 'text-green-600' : 'text-red-600') : ''
+                      r.price15 !== null ? (r.price15 >= r.currentValue ? getUpColor() : getDownColor()) : ''
                     }`}>
                       {r.price15 ? `$${formatPrice(r.price15)}` : '-'}
                     </TableCell>
                     <TableCell className={`text-right font-medium ${
-                      r.change15 !== null ? (r.change15 >= 0 ? 'text-green-600' : 'text-red-600') : ''
+                      r.change15 !== null ? (r.change15 >= 0 ? getUpColor() : getDownColor()) : ''
                     }`}>
                       {r.change15 !== null ? `${r.change15 >= 0 ? '+' : ''}${r.change15.toFixed(2)}%` : '-'}
                     </TableCell>
                     
                     {/* 20-DAY */}
                     <TableCell className={`text-right font-medium ${
-                      r.price20 !== null ? (r.price20 >= r.currentValue ? 'text-green-600' : 'text-red-600') : ''
+                      r.price20 !== null ? (r.price20 >= r.currentValue ? getUpColor() : getDownColor()) : ''
                     }`}>
                       {r.price20 ? `$${formatPrice(r.price20)}` : '-'}
                     </TableCell>
                     <TableCell className={`text-right font-medium ${
-                      r.change20 !== null ? (r.change20 >= 0 ? 'text-green-600' : 'text-red-600') : ''
+                      r.change20 !== null ? (r.change20 >= 0 ? getUpColor() : getDownColor()) : ''
                     }`}>
                       {r.change20 !== null ? `${r.change20 >= 0 ? '+' : ''}${r.change20.toFixed(2)}%` : '-'}
                     </TableCell>
                     
                     {/* 30-DAY */}
                     <TableCell className={`text-right font-medium ${
-                      r.price30 !== null ? (r.price30 >= r.currentValue ? 'text-green-600' : 'text-red-600') : ''
+                      r.price30 !== null ? (r.price30 >= r.currentValue ? getUpColor() : getDownColor()) : ''
                     }`}>
                       {r.price30 ? `$${formatPrice(r.price30)}` : '-'}
                     </TableCell>
                     <TableCell className={`text-right font-medium ${
-                      r.change30 !== null ? (r.change30 >= 0 ? 'text-green-600' : 'text-red-600') : ''
+                      r.change30 !== null ? (r.change30 >= 0 ? getUpColor() : getDownColor()) : ''
                     }`}>
                       {r.change30 !== null ? `${r.change30 >= 0 ? '+' : ''}${r.change30.toFixed(2)}%` : '-'}
                     </TableCell>
                     
                     {/* 60-DAY */}
                     <TableCell className={`text-right font-medium ${
-                      r.price60 !== null ? (r.price60 >= r.currentValue ? 'text-green-600' : 'text-red-600') : ''
+                      r.price60 !== null ? (r.price60 >= r.currentValue ? getUpColor() : getDownColor()) : ''
                     }`}>
                       {r.price60 ? `$${formatPrice(r.price60)}` : '-'}
                     </TableCell>
                     <TableCell className={`text-right font-medium ${
-                      r.change60 !== null ? (r.change60 >= 0 ? 'text-green-600' : 'text-red-600') : ''
+                      r.change60 !== null ? (r.change60 >= 0 ? getUpColor() : getDownColor()) : ''
                     }`}>
                       {r.change60 !== null ? `${r.change60 >= 0 ? '+' : ''}${r.change60.toFixed(2)}%` : '-'}
                     </TableCell>

@@ -64,6 +64,16 @@ export async function getLatestForecasts(): Promise<Forecast[]> {
   return res.data
 }
 
+export async function getUniqueProducts(): Promise<string[]> {
+  const res = await api.get<{ products: string[] }>('/forecast/products')
+  return res.data.products
+}
+
+export async function getProductDateRange(product: string): Promise<{ earliest_date: string; latest_date: string }> {
+  const res = await api.get<{ earliest_date: string; latest_date: string }>(`/forecast/date-range/${product}`)
+  return res.data
+}
+
 export async function getAccuracy(product?: string, n_days_ahead?: number) {
   const res = await api.get('/accuracy', { params: { product, n_days_ahead } })
   return res.data

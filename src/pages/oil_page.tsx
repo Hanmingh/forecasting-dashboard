@@ -1,16 +1,20 @@
 import { useParams } from "react-router-dom";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
-import { Terminal, TrendingUp, TrendingDown, Calendar, Target } from "lucide-react";
+import { Terminal, TrendingUp, TrendingDown, Calendar, Target, Star } from "lucide-react";
 import PredictionChart from "@/components/PredictionChart";
 import { useForecast } from "@/hooks/use-forecasts";
 import { useAccuracy } from "@/hooks/use-accuracy";
+import { useFavorites } from "@/hooks/use-favorites";
+import { useColorPreferences } from "@/hooks/use-color-preferences";
 import { Card, CardHeader, CardContent, CardTitle, CardDescription } from "@/components/ui/card";
-import { Table, TableBody, TableCaption, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { useMemo } from "react";
 
 const OilPage = () => {
   const { symbol } = useParams<{ symbol: string }>();
+  const { isFavorite, toggleFavorite } = useFavorites();
+  const { getUpColor, getDownColor } = useColorPreferences();
 
   const current_day = '2025-01-08'
   // Get latest forecasts for this product - optimized query
@@ -55,23 +59,6 @@ const OilPage = () => {
     };
   }, [allForecasts]);
 
-  // Group forecasts by week for compact table display
-  const weeklyForecasts = useMemo(() => {
-    const weeks: { week: string; forecasts: typeof latestForecasts }[] = [];
-    
-    for (let i = 0; i < latestForecasts.length; i += 7) {
-      const weekForecasts = latestForecasts.slice(i, i + 7);
-      const startDay = weekForecasts[0]?.n_days_ahead || 0;
-      const endDay = weekForecasts[weekForecasts.length - 1]?.n_days_ahead || 0;
-      weeks.push({
-        week: `Days ${startDay}-${endDay}`,
-        forecasts: weekForecasts
-      });
-    }
-    
-    return weeks;
-  }, [latestForecasts]);
-
   const isLoading = isForecastLoading || isAccuracyLoading;
   const isError = isForecastError || isAccuracyError;
   const error = forecastError || accuracyError;
@@ -109,7 +96,17 @@ const OilPage = () => {
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-3xl font-bold">{symbol}</h1>
+          <div className="flex items-center gap-3">
+            <h1 className="text-3xl font-bold">{symbol}</h1>
+            <Star
+              className={`h-6 w-6 cursor-pointer ${
+                isFavorite(symbol || '') 
+                  ? 'fill-yellow-400 text-yellow-400' 
+                  : 'text-gray-300 hover:text-yellow-400'
+              }`}
+              onClick={() => toggleFavorite(symbol || '')}
+            />
+          </div>
           <p className="text-gray-600">
             Commodity Price Forecasts
             <span className="ml-2 text-sm text-gray-500">Updated at {current_day}</span>
@@ -156,7 +153,7 @@ const OilPage = () => {
           </CardHeader>
           <CardContent>
             <div className={`text-lg font-bold flex items-center gap-1 ${
-              forecastStats.avgChange >= 0 ? 'text-green-600' : 'text-red-600'
+              forecastStats.avgChange >= 0 ? getUpColor() : getDownColor()
             }`}>
               {forecastStats.avgChange >= 0 ? <TrendingUp className="h-4 w-4" /> : <TrendingDown className="h-4 w-4" />}
               {forecastStats.avgChange >= 0 ? '+' : ''}{forecastStats.avgChange.toFixed(2)}%
@@ -173,7 +170,7 @@ const OilPage = () => {
           <CardContent>
             <div className={`text-lg font-bold ${
               (latestForecasts.find(f => f.n_days_ahead === 60)?.predicted_value || currentValue) >= currentValue 
-                ? 'text-green-600' : 'text-red-600'
+                ? getUpColor() : getDownColor()
             }`}>
               ${(latestForecasts.find(f => f.n_days_ahead === 60)?.predicted_value || currentValue).toFixed(2)}
             </div>
@@ -187,9 +184,9 @@ const OilPage = () => {
       {/* Chart */}
       <Card>
         <CardHeader>
-          <CardTitle>60-Day Price Forecast with Confidence Bands</CardTitle>
+          <CardTitle>60-Day Price Forecast</CardTitle>
           <CardDescription>
-            Predicted prices with 95% confidence intervals from bootstrap predictions
+            Predicted prices with confidence intervals
           </CardDescription>
         </CardHeader>
         <CardContent>
@@ -205,56 +202,87 @@ const OilPage = () => {
       {/* Detailed Forecast Table */}
       <Card>
         <CardHeader>
-          <CardTitle>Detailed Forecasts</CardTitle>
+          <CardTitle>Forecasts Table</CardTitle>
           <CardDescription>
-            Complete forecast breakdown with confidence intervals
+            Complete forecast breakdown
           </CardDescription>
         </CardHeader>
         <CardContent>
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>Days Ahead</TableHead>
-                <TableHead>Forecast Date</TableHead>
-                <TableHead className="text-right">Predicted Price</TableHead>
-                <TableHead className="text-right">Change (%)</TableHead>
-                <TableHead className="text-right">Change ($)</TableHead>
-                <TableHead className="text-right">Confidence (±)</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {latestForecasts.map((forecast) => {
-                const changePercent = ((forecast.predicted_value - currentValue) / currentValue) * 100;
-                const changeAbsolute = forecast.predicted_value - currentValue;
-                const confidenceValue = forecast.predicted_upper && forecast.predicted_lower 
-                  ? (forecast.predicted_upper - forecast.predicted_lower) / 2 
-                  : 0;
-                
-                return (
-                  <TableRow key={forecast.n_days_ahead}>
-                    <TableCell className="font-medium">{forecast.n_days_ahead}</TableCell>
-                    <TableCell>{new Date(forecast.predicted_date).toLocaleDateString()}</TableCell>
-                    <TableCell className="text-right font-medium">
-                      ${forecast.predicted_value.toFixed(2)}
+          <div className="overflow-x-auto">
+            <Table className="min-w-max">
+              <TableHeader>
+                <TableRow>
+                  <TableHead className="sticky left-0 z-10 border-r">Metric</TableHead>
+                  {latestForecasts.map((forecast) => (
+                    <TableHead key={forecast.n_days_ahead} className="text-center min-w-[120px]">
+                      {forecast.n_days_ahead} days
+                    </TableHead>
+                  ))}
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {/* Predicted Date Row */}
+                <TableRow>
+                  <TableCell className="sticky left-0 z-10 border-r font-medium">
+                    Predicted Date
+                  </TableCell>
+                  {latestForecasts.map((forecast) => (
+                    <TableCell key={forecast.n_days_ahead} className="text-center">
+                      {new Date(forecast.predicted_date).toLocaleDateString()}
                     </TableCell>
-                    <TableCell className={`text-right font-medium ${
-                      changePercent >= 0 ? 'text-green-600' : 'text-red-600'
-                    }`}>
-                      {changePercent >= 0 ? '+' : ''}{changePercent.toFixed(2)}%
+                  ))}
+                </TableRow>
+
+                {/* Upper Bound Row */}
+                <TableRow>
+                  <TableCell className="sticky left-0 z-10 border-r font-medium">
+                    Upper Bound
+                  </TableCell>
+                  {latestForecasts.map((forecast) => (
+                    <TableCell key={forecast.n_days_ahead} className="text-center text-gray-600">
+                      {forecast.predicted_upper ? `$${forecast.predicted_upper.toFixed(2)}` : '-'}
                     </TableCell>
-                    <TableCell className={`text-right ${
-                      changeAbsolute >= 0 ? 'text-green-600' : 'text-red-600'
-                    }`}>
-                      {changeAbsolute >= 0 ? '+' : ''}${changeAbsolute.toFixed(2)}
+                  ))}
+                </TableRow>
+
+                {/* Predicted Value Row */}
+                <TableRow>
+                  <TableCell className="sticky left-0 z-10 border-r font-medium">
+                    Predicted Value
+                  </TableCell>
+                  {latestForecasts.map((forecast) => {
+                    const changePercent = ((forecast.predicted_value - currentValue) / currentValue) * 100;
+                    return (
+                      <TableCell key={forecast.n_days_ahead} className="text-center">
+                        <div className={`font-medium ${
+                          changePercent >= 0 ? getUpColor() : getDownColor()
+                        }`}>
+                          ${forecast.predicted_value.toFixed(2)}
+                        </div>
+                        <div className={`text-xs ${
+                          changePercent >= 0 ? getUpColor() : getDownColor()
+                        }`}>
+                          {changePercent >= 0 ? '+' : ''}{changePercent.toFixed(1)}%
+                        </div>
+                      </TableCell>
+                    );
+                  })}
+                </TableRow>
+
+                {/* Lower Bound Row */}
+                <TableRow>
+                  <TableCell className="sticky left-0 z-10 border-r font-medium">
+                    Lower Bound
+                  </TableCell>
+                  {latestForecasts.map((forecast) => (
+                    <TableCell key={forecast.n_days_ahead} className="text-center text-gray-600">
+                      {forecast.predicted_lower ? `$${forecast.predicted_lower.toFixed(2)}` : '-'}
                     </TableCell>
-                    <TableCell className="text-right text-gray-600">
-                      {confidenceValue > 0 ? `$${confidenceValue.toFixed(2)}` : '-'}
-                    </TableCell>
-                  </TableRow>
-                );
-              })}
-            </TableBody>
-          </Table>
+                  ))}
+                </TableRow>
+              </TableBody>
+            </Table>
+          </div>
         </CardContent>
       </Card>
     </div>

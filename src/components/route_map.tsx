@@ -27,8 +27,8 @@ function RouteMap({ routes, ports, selectedRouteId }: RouteMapProps) {
           latLng: [departurePort.latitude, departurePort.longitude],
           style: {
             initial: {
-              fill: "#2ecc71",
-              stroke: "#27ae60",
+              fill: "#61adde",
+              stroke: "#4670bc",
               "stroke-width": 2,
               r: 6
             }
@@ -44,8 +44,8 @@ function RouteMap({ routes, ports, selectedRouteId }: RouteMapProps) {
           latLng: [arrivalPort.latitude, arrivalPort.longitude],
           style: {
             initial: {
-              fill: "#e74c3c",
-              stroke: "#c0392b",
+              fill: "#99b6c4",
+              stroke: "#4670bc",
               "stroke-width": 2,
               r: 6
             }
@@ -58,14 +58,14 @@ function RouteMap({ routes, ports, selectedRouteId }: RouteMapProps) {
         routeMarkers.push({
           name: `Vessel ${route.id}`,
           latLng: [route.current_latitude, route.current_longitude],
-          style: {
-            initial: {
-              fill: selectedRouteId === route.id ? "#ff0000" : "#3498db",
-              stroke: "#2c3e50",
-              "stroke-width": 3,
-              r: 8
+                      style: {
+              initial: {
+                fill: selectedRouteId === route.id ? "#4670bc" : "#61adde",
+                stroke: "#99b6c4",
+                "stroke-width": 3,
+                r: 8
+              }
             }
-          }
         });
       }
     }
@@ -82,15 +82,15 @@ function RouteMap({ routes, ports, selectedRouteId }: RouteMapProps) {
           width: "100%",
           height: "100%",
         }}
-        backgroundColor="#f8f9fa"
+        backgroundColor="linear-gradient(135deg, #61adde10, #99b6c410)"
         markers={allMarkers}
         markerStyle={{
           initial: {
-            fill: "#3498db",
-            stroke: "#2c3e50",
+            fill: "#61adde",
+            stroke: "#4670bc",
           },
           hover: {
-            fill: "#e74c3c",
+            fill: "#99b6c4",
             cursor: "pointer",
           },
         }}
@@ -149,11 +149,11 @@ function RouteMap({ routes, ports, selectedRouteId }: RouteMapProps) {
         }}
         regionStyle={{
           initial: {
-            fill: "#ecf0f1",
-            stroke: "#bdc3c7",
+            fill: "#f8fafc",
+            stroke: "#99b6c4",
           },
           hover: {
-            fill: "#3498db",
+            fill: "#61adde",
             cursor: "pointer",
           },
         }}
@@ -172,15 +172,15 @@ function RouteMap({ routes, ports, selectedRouteId }: RouteMapProps) {
       }}>
         <div style={{ fontWeight: "bold", marginBottom: "8px" }}>Legend</div>
         <div style={{ display: "flex", alignItems: "center", marginBottom: "4px" }}>
-          <div style={{ width: "12px", height: "12px", backgroundColor: "#2ecc71", borderRadius: "50%", marginRight: "6px" }}></div>
+          <div style={{ width: "12px", height: "12px", backgroundColor: "#61adde", borderRadius: "50%", marginRight: "6px" }}></div>
           Departure Ports
         </div>
         <div style={{ display: "flex", alignItems: "center", marginBottom: "4px" }}>
-          <div style={{ width: "12px", height: "12px", backgroundColor: "#e74c3c", borderRadius: "50%", marginRight: "6px" }}></div>
+          <div style={{ width: "12px", height: "12px", backgroundColor: "#99b6c4", borderRadius: "50%", marginRight: "6px" }}></div>
           Arrival Ports
         </div>
         <div style={{ display: "flex", alignItems: "center" }}>
-          <div style={{ width: "12px", height: "12px", backgroundColor: "#3498db", borderRadius: "50%", marginRight: "6px" }}></div>
+          <div style={{ width: "12px", height: "12px", backgroundColor: "#4670bc", borderRadius: "50%", marginRight: "6px" }}></div>
           Vessels
         </div>
       </div>

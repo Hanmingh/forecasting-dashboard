@@ -3,12 +3,11 @@ import { useRoute } from '../hooks/use-route';
 import { useVessel } from '../hooks/use-vessel';
 import { usePort } from '../hooks/use-port';
 import RouteMap from '../components/route_map';
-import type { RouteResponse, RouteCreate, VesselResponse, VesselCreate, PortResponse } from '../hooks/types';
+import type { RouteResponse, RouteCreate, VesselResponse, PortResponse } from '../hooks/types';
 import {
   Card,
   CardContent,
   CardDescription,
-  CardFooter,
   CardHeader,
   CardTitle,
 } from "@/components/ui/card"
@@ -20,7 +19,7 @@ import {
   DialogTitle,
   DialogFooter,
 } from "@/components/ui/dialog"
-import { PlusCircle, Anchor, RefreshCw } from 'lucide-react';
+import { PlusCircle, RefreshCw } from 'lucide-react';
 
 const RoutePage: React.FC = () => {
   // State management
@@ -28,20 +27,14 @@ const RoutePage: React.FC = () => {
   const [vessels, setVessels] = useState<VesselResponse[]>([]);
   const [ports, setPorts] = useState<PortResponse[]>([]);
   const [selectedRoute, setSelectedRoute] = useState<RouteResponse | null>(null);
-  const [selectedVessel, setSelectedVessel] = useState<VesselResponse | null>(null);
   const [selectedRouteForMap, setSelectedRouteForMap] = useState<number | undefined>(undefined);
   const [isRouteDialogOpen, setIsRouteDialogOpen] = useState(false);
-  const [isVesselDialogOpen, setIsVesselDialogOpen] = useState(false);
   const [routeFormData, setRouteFormData] = useState<RouteCreate>({
     vessel_id: 0,
     departure_port_id: 0,
     arrival_port_id: 0,
     scheduled_departure: '',
     estimated_arrival: '',
-  });
-  const [vesselFormData, setVesselFormData] = useState<VesselCreate>({
-    vessel_name: '',
-    vessel_type: '',
   });
 
   // Hooks
@@ -51,7 +44,6 @@ const RoutePage: React.FC = () => {
     fetchRoutes,
     addRoute,
     modifyRoute,
-    updateLocation,
     removeRoute,
   } = useRoute();
 
@@ -59,9 +51,6 @@ const RoutePage: React.FC = () => {
     loading: vesselLoading,
     error: vesselError,
     fetchVessels,
-    addVessel,
-    modifyVessel,
-    removeVessel,
   } = useVessel();
 
   const {
@@ -135,11 +124,6 @@ const RoutePage: React.FC = () => {
     }
   };
 
-  const handleUpdateLocation = async (routeId: number, latitude: number, longitude: number) => {
-    await updateLocation(routeId, { current_latitude: latitude, current_longitude: longitude });
-    loadRoutes();
-  };
-
   const handleCreateNewRoute = () => {
     setSelectedRoute(null);
     setRouteFormData({
@@ -150,42 +134,6 @@ const RoutePage: React.FC = () => {
       estimated_arrival: '',
     });
     setIsRouteDialogOpen(true);
-  };
-
-  const handleCreateNewVessel = () => {
-    setSelectedVessel(null);
-    setVesselFormData({
-      vessel_name: '',
-      vessel_type: '',
-    });
-    setIsVesselDialogOpen(true);
-  };
-
-  const handleVesselSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (selectedVessel) {
-      await modifyVessel(selectedVessel.id, vesselFormData);
-    } else {
-      await addVessel(vesselFormData);
-    }
-    setIsVesselDialogOpen(false);
-    loadVessels();
-  };
-
-  const handleEditVessel = (vessel: VesselResponse) => {
-    setSelectedVessel(vessel);
-    setVesselFormData({
-      vessel_name: vessel.vessel_name,
-      vessel_type: vessel.vessel_type,
-    });
-    setIsVesselDialogOpen(true);
-  };
-
-  const handleDeleteVessel = async (vesselId: number) => {
-    if (window.confirm('Are you sure you want to delete this vessel?')) {
-      await removeVessel(vesselId);
-      loadVessels();
-    }
   };
 
   if (routeLoading || vesselLoading || portLoading) {
@@ -201,8 +149,8 @@ const RoutePage: React.FC = () => {
       {/* Header with refresh button */}
       <div className="flex justify-between items-center mb-6">
         <div>
-          <h1 className="text-2xl font-bold">Route Management</h1>
-          <p className="text-gray-600">Manage your fleet, routes, and track vessels</p>
+          <h1 className="text-3xl font-bold bg-gradient-to-r from-[#61adde] to-[#4670bc] bg-clip-text text-transparent">Route Management</h1>
+          <p className="text-[#99b6c4]">Plan, monitor and manage shipping routes</p>
         </div>
         <button
           onClick={() => {
@@ -210,7 +158,7 @@ const RoutePage: React.FC = () => {
             loadVessels();
             loadPorts();
           }}
-          className="flex items-center gap-2 px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition-colors"
+          className="flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-[#61adde] to-[#4670bc] text-white rounded-lg hover:opacity-90 transition-opacity"
         >
           <RefreshCw className="h-4 w-4" />
           Refresh Data
@@ -218,419 +166,145 @@ const RoutePage: React.FC = () => {
       </div>
 
       <div className="grid grid-cols-1 gap-6">
-        {/* Statistics Section */}
-        <div className="grid grid-cols-4 gap-4">
-          <Card>
-            <CardHeader className="pb-2">
-              <CardTitle className="text-sm font-medium text-gray-600">Total Vessels</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold">{vessels.length}</div>
-              <p className="text-xs text-gray-500 mt-1">
-                Active fleet size
-              </p>
-            </CardContent>
-          </Card>
-
-          <Card>
-            <CardHeader className="pb-2">
-              <CardTitle className="text-sm font-medium text-gray-600">Active Routes</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold">{routes.length}</div>
-              <p className="text-xs text-gray-500 mt-1">
-                Current shipping routes
-              </p>
-            </CardContent>
-          </Card>
-
-          <Card>
-            <CardHeader className="pb-2">
-              <CardTitle className="text-sm font-medium text-gray-600">Vessels En Route</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold">
-                {routes.filter(r => r.current_latitude && r.current_longitude).length}
-              </div>
-              <p className="text-xs text-gray-500 mt-1">
-                Currently tracking
-              </p>
-            </CardContent>
-          </Card>
-
-          <Card>
-            <CardHeader className="pb-2">
-              <CardTitle className="text-sm font-medium text-gray-600">Unique Ports</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold">
-                {new Set([
-                  ...routes.map(r => r.departure_port_id),
-                  ...routes.map(r => r.arrival_port_id)
-                ]).size}
-              </div>
-              <p className="text-xs text-gray-500 mt-1">
-                Ports in network
-              </p>
-            </CardContent>
-          </Card>
-        </div>
-
-        {/* Existing Vessels and Routes Cards */}
-        <div className="grid grid-cols-2 gap-6">
-          {/* Vessels Card */}
-          <Card className="h-[30vh]">
-            <CardHeader className="flex flex-row items-center justify-between">
-              <div>
-                <CardTitle>Vessels</CardTitle>
-                <CardDescription>Manage your vessel fleet</CardDescription>
-              </div>
-              <button
-                onClick={handleCreateNewVessel}
-                className="p-2 hover:bg-gray-100 rounded-full"
-              >
-                <PlusCircle className="h-6 w-6" />
-              </button>
-            </CardHeader>
-            <CardContent className="overflow-y-auto h-[calc(50vh-8rem)]">
-              <div className="grid grid-cols-2 gap-4">
-                {vessels.map(vessel => (
-                  <Card key={vessel.id} className="shadow-sm">
-                    <CardHeader className="p-3">
-                      <div className="flex justify-between items-center">
-                        <div className="flex items-center gap-2">
-                          <Anchor className="h-4 w-4" />
-                          <CardTitle className="text-base truncate">
-                            {vessel.vessel_name}
-                          </CardTitle>
-                        </div>
-                        <div className="flex gap-1">
-                          <button
-                            onClick={() => handleEditVessel(vessel)}
-                            className="p-1.5 bg-yellow-500 text-white rounded hover:bg-yellow-600"
-                          >
-                            Edit
-                          </button>
-                          <button
-                            onClick={() => handleDeleteVessel(vessel.id)}
-                            className="p-1.5 bg-red-500 text-white rounded hover:bg-red-600"
-                          >
-                            Delete
-                          </button>
-                        </div>
-                      </div>
-                    </CardHeader>
-                    <CardContent className="p-3 pt-0">
-                      <p className="text-sm">Type: {vessel.vessel_type}</p>
-                      <div className="flex items-center justify-between mt-2">
-                        <p className="text-sm text-gray-600">
-                          Routes: {routes.filter(r => r.vessel_id === vessel.id).length}
-                        </p>
-                        <div className={`px-2 py-1 rounded-full text-xs ${
-                          routes.some(r => r.vessel_id === vessel.id && r.current_latitude && r.current_longitude)
+        {/* Routes Section */}
+        <Card className="w-full">
+          <CardHeader className="flex flex-row items-center justify-between">
+            <div>
+              <CardTitle className="text-[#61adde]">Routes</CardTitle>
+              <CardDescription>Manage and monitor your shipping routes</CardDescription>
+            </div>
+            <button
+              onClick={handleCreateNewRoute}
+              className="p-2 hover:bg-gray-100 rounded-full transition-colors"
+            >
+              <PlusCircle className="h-6 w-6 text-[#61adde]" />
+            </button>
+          </CardHeader>
+          <CardContent>
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+              {routes.map(route => (
+                <Card 
+                  key={route.id} 
+                  className={`shadow-sm cursor-pointer transition-all hover:shadow-md ${
+                    selectedRouteForMap === route.id ? 'ring-2 ring-[#61adde] bg-blue-50' : ''
+                  }`}
+                  onClick={() => setSelectedRouteForMap(selectedRouteForMap === route.id ? undefined : route.id)}
+                >
+                  <CardHeader className="p-4">
+                    <div className="flex justify-between items-start">
+                      <div className="flex-1 min-w-0">
+                        <CardTitle className="text-base truncate">
+                          {vessels.find(v => v.id === route.vessel_id)?.vessel_name || `Vessel ${route.vessel_id}`}
+                        </CardTitle>
+                        <div className={`inline-flex px-2 py-1 rounded-full text-xs mt-2 ${
+                          route.current_latitude && route.current_longitude
                             ? 'bg-green-100 text-green-800'
-                            : routes.some(r => r.vessel_id === vessel.id)
+                            : new Date(route.scheduled_departure) > new Date()
                             ? 'bg-blue-100 text-blue-800'
-                            : 'bg-gray-100 text-gray-800'
+                            : 'bg-yellow-100 text-yellow-800'
                         }`}>
-                          {routes.some(r => r.vessel_id === vessel.id && r.current_latitude && r.current_longitude)
+                          {route.current_latitude && route.current_longitude
                             ? 'En Route'
-                            : routes.some(r => r.vessel_id === vessel.id)
+                            : new Date(route.scheduled_departure) > new Date()
                             ? 'Scheduled'
-                            : 'Idle'
+                            : 'Departed'
                           }
                         </div>
                       </div>
-                    </CardContent>
-                  </Card>
-                ))}
-                
-                {/* Empty Vessel Card */}
-                <Card 
-                  className="shadow-sm border-dashed cursor-pointer hover:bg-gray-50 transition-colors"
-                  onClick={handleCreateNewVessel}
-                >
-                  <CardContent className="flex items-center justify-center h-[104px]">
-                    <div className="text-center">
-                      <PlusCircle className="h-8 w-8 mx-auto mb-1 text-gray-400" />
-                      <p className="text-gray-500 text-sm">Add New Vessel</p>
+                    </div>
+                  </CardHeader>
+                  <CardContent className="p-4 pt-0 space-y-2">
+                    <div className="text-sm">
+                      <strong>From:</strong> {ports.find(p => p.id === route.departure_port_id)?.port_name || `Port ${route.departure_port_id}`}
+                    </div>
+                    <div className="text-sm">
+                      <strong>To:</strong> {ports.find(p => p.id === route.arrival_port_id)?.port_name || `Port ${route.arrival_port_id}`}
+                    </div>
+                    <div className="grid grid-cols-2 gap-2 text-sm mt-3">
+                      <div>
+                        <span className="text-gray-500">Departure:</span>
+                        <div className="font-medium">{new Date(route.scheduled_departure).toLocaleDateString()}</div>
+                      </div>
+                      <div>
+                        <span className="text-gray-500">Arrival:</span>
+                        <div className="font-medium">{new Date(route.estimated_arrival).toLocaleDateString()}</div>
+                      </div>
+                    </div>
+                    <div className="flex gap-2 mt-3">
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleEdit(route);
+                        }}
+                        className="flex-1 px-3 py-1.5 bg-[#61adde] text-white text-xs rounded hover:bg-[#4670bc] transition-colors"
+                      >
+                        Edit
+                      </button>
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleDelete(route.id);
+                        }}
+                        className="flex-1 px-3 py-1.5 bg-red-500 text-white text-xs rounded hover:bg-red-600 transition-colors"
+                      >
+                        Delete
+                      </button>
                     </div>
                   </CardContent>
                 </Card>
-              </div>
-            </CardContent>
-          </Card>
-
-          {/* Routes Card */}
-          <Card className="h-[30vh]">
-            <CardHeader className="flex flex-row items-center justify-between">
-              <div>
-                <CardTitle>Routes</CardTitle>
-                <CardDescription>Manage and monitor your routes</CardDescription>
-              </div>
-              <button
+              ))}
+              
+              {/* Add New Route Card */}
+              <Card 
+                className="shadow-sm border-dashed cursor-pointer hover:bg-gray-50 transition-colors border-[#99b6c4]"
                 onClick={handleCreateNewRoute}
-                className="p-2 hover:bg-gray-100 rounded-full"
               >
-                <PlusCircle className="h-6 w-6" />
-              </button>
-            </CardHeader>
-            <CardContent className="overflow-y-auto h-[calc(50vh-8rem)]">
-              <div className="grid grid-cols-2 gap-4">
-                {routes.map(route => (
-                  <Card 
-                    key={route.id} 
-                    className={`shadow-sm cursor-pointer transition-all ${
-                      selectedRouteForMap === route.id ? 'ring-2 ring-blue-500 bg-blue-50' : ''
-                    }`}
-                    onClick={() => setSelectedRouteForMap(selectedRouteForMap === route.id ? undefined : route.id)}
-                  >
-                    <CardHeader className="p-3">
-                      <div className="flex justify-between items-center">
-                        <div className="flex-1">
-                          <CardTitle className="text-base truncate">
-                            {vessels.find(v => v.id === route.vessel_id)?.vessel_name || `Route ${route.id}`}
-                          </CardTitle>
-                          <div className={`inline-flex px-2 py-1 rounded-full text-xs mt-1 ${
-                            route.current_latitude && route.current_longitude
-                              ? 'bg-green-100 text-green-800'
-                              : new Date(route.scheduled_departure) > new Date()
-                              ? 'bg-blue-100 text-blue-800'
-                              : 'bg-yellow-100 text-yellow-800'
-                          }`}>
-                            {route.current_latitude && route.current_longitude
-                              ? 'En Route'
-                              : new Date(route.scheduled_departure) > new Date()
-                              ? 'Scheduled'
-                              : 'Departed'
-                            }
-                          </div>
-                        </div>
-                        <div className="flex gap-1">
-                          <button
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              handleEdit(route);
-                            }}
-                            className="p-1.5 bg-yellow-500 text-white rounded hover:bg-yellow-600"
-                          >
-                            Edit
-                          </button>
-                          <button
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              handleDelete(route.id);
-                            }}
-                            className="p-1.5 bg-red-500 text-white rounded hover:bg-red-600"
-                          >
-                            Delete
-                          </button>
-                        </div>
-                      </div>
-                    </CardHeader>
-                    <CardContent className="p-3 space-y-1">
-                      <p className="text-sm">From: {ports.find(p => p.id === route.departure_port_id)?.port_name || `Port ${route.departure_port_id}`}</p>
-                      <p className="text-sm">To: {ports.find(p => p.id === route.arrival_port_id)?.port_name || `Port ${route.arrival_port_id}`}</p>
-                      <div className="grid grid-cols-2 gap-2 text-sm mt-2">
-                        <div>
-                          <span className="text-gray-500">Departure:</span>
-                          <br />
-                          <span className="font-medium">{new Date(route.scheduled_departure).toLocaleDateString()}</span>
-                        </div>
-                        <div>
-                          <span className="text-gray-500">Arrival:</span>
-                          <br />
-                          <span className="font-medium">{new Date(route.estimated_arrival).toLocaleDateString()}</span>
-                        </div>
-                      </div>
-                      {route.current_latitude && route.current_longitude && (
-                        <div className="mt-2">
-                          <p className="text-sm font-medium">Update Current Location:</p>
-                          <div className="flex gap-2 mt-1">
-                            <input
-                              type="number"
-                              placeholder="Lat"
-                              className="p-1 text-sm border rounded w-20"
-                              id={`lat-${route.id}`}
-                              step="any"
-                            />
-                            <input
-                              type="number"
-                              placeholder="Long"
-                              className="p-1 text-sm border rounded w-20"
-                              id={`lng-${route.id}`}
-                              step="any"
-                            />
-                            <button
-                              onClick={() => {
-                                const lat = parseFloat((document.getElementById(`lat-${route.id}`) as HTMLInputElement).value);
-                                const lng = parseFloat((document.getElementById(`lng-${route.id}`) as HTMLInputElement).value);
-                                if (!isNaN(lat) && !isNaN(lng)) {
-                                  handleUpdateLocation(route.id, lat, lng);
-                                }
-                              }}
-                              className="p-1 text-sm bg-green-500 text-white rounded hover:bg-green-600"
-                            >
-                              Update
-                            </button>
-                          </div>
-                        </div>
-                      )}
-                    </CardContent>
-                  </Card>
-                ))}
-                
-                {/* Empty Route Card */}
-                <Card 
-                  className="shadow-sm border-dashed cursor-pointer hover:bg-gray-50 transition-colors"
-                  onClick={handleCreateNewRoute}
-                >
-                  <CardContent className="flex items-center justify-center h-[104px]">
-                    <div className="text-center">
-                      <PlusCircle className="h-8 w-8 mx-auto mb-1 text-gray-400" />
-                      <p className="text-gray-500 text-sm">Add New Route</p>
-                    </div>
-                  </CardContent>
-                </Card>
-              </div>
-            </CardContent>
-          </Card>
-        </div>
+                <CardContent className="flex items-center justify-center h-[200px]">
+                  <div className="text-center">
+                    <PlusCircle className="h-8 w-8 mx-auto mb-2 text-[#61adde]" />
+                    <p className="text-[#99b6c4] text-sm">Add New Route</p>
+                  </div>
+                </CardContent>
+              </Card>
+            </div>
+          </CardContent>
+        </Card>
 
         {/* Route Map Section */}
-        <div className="w-full h-[600px]">
-          <RouteMap 
-            routes={routes} 
-            ports={ports} 
-            selectedRouteId={selectedRouteForMap}
-          />
-        </div>
-
-        {/* Route Summary Section */}
-        <div className="grid grid-cols-2 gap-6">
-          <Card>
-            <CardHeader>
-              <CardTitle className="text-lg">Upcoming Departures</CardTitle>
-              <CardDescription>Next 7 days</CardDescription>
-            </CardHeader>
-            <CardContent className="max-h-[300px] overflow-y-auto">
-              {routes
-                .filter(route => {
-                  const departureDate = new Date(route.scheduled_departure);
-                  const now = new Date();
-                  const sevenDaysFromNow = new Date(now.getTime() + 7 * 24 * 60 * 60 * 1000);
-                  return departureDate >= now && departureDate <= sevenDaysFromNow;
-                })
-                .sort((a, b) => new Date(a.scheduled_departure).getTime() - new Date(b.scheduled_departure).getTime())
-                .slice(0, 5)
-                .map(route => {
-                  const vessel = vessels.find(v => v.id === route.vessel_id);
-                  const departurePort = ports.find(p => p.id === route.departure_port_id);
-                  const arrivalPort = ports.find(p => p.id === route.arrival_port_id);
-                  
-                  return (
-                    <div key={route.id} className="flex items-center justify-between py-2 border-b last:border-b-0">
-                      <div>
-                        <div className="font-medium">{vessel?.vessel_name}</div>
-                        <div className="text-sm text-gray-500">
-                          {departurePort?.port_name} → {arrivalPort?.port_name}
-                        </div>
-                      </div>
-                      <div className="text-right">
-                        <div className="text-sm font-medium">
-                          {new Date(route.scheduled_departure).toLocaleDateString()}
-                        </div>
-                        <div className="text-xs text-gray-500">
-                          {new Date(route.scheduled_departure).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}
-                        </div>
-                      </div>
-                    </div>
-                  );
-                })}
-              {routes.filter(route => {
-                const departureDate = new Date(route.scheduled_departure);
-                const now = new Date();
-                const sevenDaysFromNow = new Date(now.getTime() + 7 * 24 * 60 * 60 * 1000);
-                return departureDate >= now && departureDate <= sevenDaysFromNow;
-              }).length === 0 && (
-                <div className="text-center text-gray-500 py-4">
-                  No departures scheduled in the next 7 days
-                </div>
-              )}
-            </CardContent>
-          </Card>
-
-          <Card>
-            <CardHeader>
-              <CardTitle className="text-lg">Expected Arrivals</CardTitle>
-              <CardDescription>Next 7 days</CardDescription>
-            </CardHeader>
-            <CardContent className="max-h-[300px] overflow-y-auto">
-              {routes
-                .filter(route => {
-                  const arrivalDate = new Date(route.estimated_arrival);
-                  const now = new Date();
-                  const sevenDaysFromNow = new Date(now.getTime() + 7 * 24 * 60 * 60 * 1000);
-                  return arrivalDate >= now && arrivalDate <= sevenDaysFromNow;
-                })
-                .sort((a, b) => new Date(a.estimated_arrival).getTime() - new Date(b.estimated_arrival).getTime())
-                .slice(0, 5)
-                .map(route => {
-                  const vessel = vessels.find(v => v.id === route.vessel_id);
-                  const departurePort = ports.find(p => p.id === route.departure_port_id);
-                  const arrivalPort = ports.find(p => p.id === route.arrival_port_id);
-                  
-                  return (
-                    <div key={route.id} className="flex items-center justify-between py-2 border-b last:border-b-0">
-                      <div>
-                        <div className="font-medium">{vessel?.vessel_name}</div>
-                        <div className="text-sm text-gray-500">
-                          {departurePort?.port_name} → {arrivalPort?.port_name}
-                        </div>
-                      </div>
-                      <div className="text-right">
-                        <div className="text-sm font-medium">
-                          {new Date(route.estimated_arrival).toLocaleDateString()}
-                        </div>
-                        <div className="text-xs text-gray-500">
-                          {new Date(route.estimated_arrival).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}
-                        </div>
-                      </div>
-                    </div>
-                  );
-                })}
-              {routes.filter(route => {
-                const arrivalDate = new Date(route.estimated_arrival);
-                const now = new Date();
-                const sevenDaysFromNow = new Date(now.getTime() + 7 * 24 * 60 * 60 * 1000);
-                return arrivalDate >= now && arrivalDate <= sevenDaysFromNow;
-              }).length === 0 && (
-                <div className="text-center text-gray-500 py-4">
-                  No arrivals expected in the next 7 days
-                </div>
-              )}
-            </CardContent>
-          </Card>
-        </div>
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-[#61adde]">Route Map</CardTitle>
+            <CardDescription>Interactive map showing all routes and vessel positions</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="w-full h-[500px]">
+              <RouteMap 
+                routes={routes} 
+                ports={ports} 
+                selectedRouteId={selectedRouteForMap}
+              />
+            </div>
+          </CardContent>
+        </Card>
       </div>
 
       {/* Route Dialog */}
       <Dialog open={isRouteDialogOpen} onOpenChange={setIsRouteDialogOpen}>
         <DialogContent className="sm:max-w-[425px]">
           <DialogHeader>
-            <DialogTitle>{selectedRoute ? 'Edit Route' : 'Create New Route'}</DialogTitle>
+            <DialogTitle className="text-[#61adde]">{selectedRoute ? 'Edit Route' : 'Create New Route'}</DialogTitle>
             <DialogDescription>
               {selectedRoute ? 'Modify the existing route details' : 'Enter the details for a new route'}
             </DialogDescription>
           </DialogHeader>
           <form id="routeForm" onSubmit={handleRouteSubmit} className="space-y-4">
             <div>
-              <label className="block mb-1">Vessel</label>
+              <label className="block mb-1 text-sm font-medium">Vessel</label>
               <select
                 name="vessel_id"
                 value={routeFormData.vessel_id}
                 onChange={handleInputChange}
-                className="w-full p-2 border rounded"
+                className="w-full p-2 border rounded focus:border-[#61adde] focus:ring-1 focus:ring-[#61adde]"
                 required
               >
                 <option value="">Select Vessel</option>
@@ -643,12 +317,12 @@ const RoutePage: React.FC = () => {
             </div>
 
             <div>
-              <label className="block mb-1">Departure Port</label>
+              <label className="block mb-1 text-sm font-medium">Departure Port</label>
               <select
                 name="departure_port_id"
                 value={routeFormData.departure_port_id}
                 onChange={handleInputChange}
-                className="w-full p-2 border rounded"
+                className="w-full p-2 border rounded focus:border-[#61adde] focus:ring-1 focus:ring-[#61adde]"
                 required
               >
                 <option value="">Select Departure Port</option>
@@ -661,12 +335,12 @@ const RoutePage: React.FC = () => {
             </div>
 
             <div>
-              <label className="block mb-1">Arrival Port</label>
+              <label className="block mb-1 text-sm font-medium">Arrival Port</label>
               <select
                 name="arrival_port_id"
                 value={routeFormData.arrival_port_id}
                 onChange={handleInputChange}
-                className="w-full p-2 border rounded"
+                className="w-full p-2 border rounded focus:border-[#61adde] focus:ring-1 focus:ring-[#61adde]"
                 required
               >
                 <option value="">Select Arrival Port</option>
@@ -679,25 +353,25 @@ const RoutePage: React.FC = () => {
             </div>
 
             <div>
-              <label className="block mb-1">Scheduled Departure</label>
+              <label className="block mb-1 text-sm font-medium">Scheduled Departure</label>
               <input
                 type="datetime-local"
                 name="scheduled_departure"
                 value={routeFormData.scheduled_departure}
                 onChange={handleInputChange}
-                className="w-full p-2 border rounded"
+                className="w-full p-2 border rounded focus:border-[#61adde] focus:ring-1 focus:ring-[#61adde]"
                 required
               />
             </div>
 
             <div>
-              <label className="block mb-1">Estimated Arrival</label>
+              <label className="block mb-1 text-sm font-medium">Estimated Arrival</label>
               <input
                 type="datetime-local"
                 name="estimated_arrival"
                 value={routeFormData.estimated_arrival}
                 onChange={handleInputChange}
-                className="w-full p-2 border rounded"
+                className="w-full p-2 border rounded focus:border-[#61adde] focus:ring-1 focus:ring-[#61adde]"
                 required
               />
             </div>
@@ -706,69 +380,16 @@ const RoutePage: React.FC = () => {
             <button
               type="button"
               onClick={() => setIsRouteDialogOpen(false)}
-              className="px-4 py-2 bg-gray-500 text-white rounded hover:bg-gray-600"
+              className="px-4 py-2 bg-gray-500 text-white rounded hover:bg-gray-600 transition-colors"
             >
               Cancel
             </button>
             <button
               type="submit"
               form="routeForm"
-              className="px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600"
+              className="px-4 py-2 bg-gradient-to-r from-[#61adde] to-[#4670bc] text-white rounded hover:opacity-90 transition-opacity"
             >
               {selectedRoute ? 'Update Route' : 'Create Route'}
-            </button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
-
-      {/* Vessel Dialog */}
-      <Dialog open={isVesselDialogOpen} onOpenChange={setIsVesselDialogOpen}>
-        <DialogContent className="sm:max-w-[425px]">
-          <DialogHeader>
-            <DialogTitle>{selectedVessel ? 'Edit Vessel' : 'Create New Vessel'}</DialogTitle>
-            <DialogDescription>
-              {selectedVessel ? 'Modify the existing vessel details' : 'Enter the details for a new vessel'}
-            </DialogDescription>
-          </DialogHeader>
-          <form id="vesselForm" onSubmit={handleVesselSubmit} className="space-y-4">
-            <div>
-              <label className="block mb-1">Vessel Name</label>
-              <input
-                type="text"
-                name="vessel_name"
-                value={vesselFormData.vessel_name}
-                onChange={(e) => setVesselFormData(prev => ({ ...prev, vessel_name: e.target.value }))}
-                className="w-full p-2 border rounded"
-                required
-              />
-            </div>
-
-            <div>
-              <label className="block mb-1">Vessel Type</label>
-              <input
-                type="text"
-                name="vessel_type"
-                value={vesselFormData.vessel_type}
-                onChange={(e) => setVesselFormData(prev => ({ ...prev, vessel_type: e.target.value }))}
-                className="w-full p-2 border rounded"
-                required
-              />
-            </div>
-          </form>
-          <DialogFooter>
-            <button
-              type="button"
-              onClick={() => setIsVesselDialogOpen(false)}
-              className="px-4 py-2 bg-gray-500 text-white rounded hover:bg-gray-600"
-            >
-              Cancel
-            </button>
-            <button
-              type="submit"
-              form="vesselForm"
-              className="px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600"
-            >
-              {selectedVessel ? 'Update Vessel' : 'Create Vessel'}
             </button>
           </DialogFooter>
         </DialogContent>
