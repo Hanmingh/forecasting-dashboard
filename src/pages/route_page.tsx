@@ -3,6 +3,16 @@ import { useRoute } from '../hooks/use-route';
 import { useVessel } from '../hooks/use-vessel';
 import { usePort } from '../hooks/use-port';
 import RouteMap from '../components/route_map';
+import { 
+  Select, 
+  SelectContent, 
+  SelectItem, 
+  SelectTrigger, 
+  SelectValue 
+} from '@/components/ui/select';
+import { Calendar } from '@/components/ui/calendar';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+import { CalendarIcon } from 'lucide-react';
 import type { RouteResponse, RouteCreate, VesselResponse, PortResponse } from '../hooks/types';
 import {
   Card,
@@ -90,6 +100,58 @@ const RoutePage: React.FC = () => {
       ...prev,
       [name]: name.includes('_id') ? parseInt(value) : value,
     }));
+  };
+
+  const handleSelectChange = (name: string, value: string) => {
+    setRouteFormData(prev => ({
+      ...prev,
+      [name]: name.includes('_id') ? parseInt(value) : value,
+    }));
+  };
+
+  const handleDateChange = (name: string, date: Date | undefined) => {
+    if (date) {
+      // Preserve existing time if any, otherwise set to current time
+      const existingDateTime = routeFormData[name as keyof RouteCreate] as string;
+      let timeString = '09:00'; // default time
+      
+      if (existingDateTime) {
+        const existingDate = new Date(existingDateTime);
+        timeString = existingDate.toTimeString().slice(0, 5);
+      }
+      
+      // Combine date with time
+      const formatted = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}T${timeString}`;
+      
+      setRouteFormData(prev => ({
+        ...prev,
+        [name]: formatted,
+      }));
+    }
+  };
+
+  const handleTimeChange = (name: string, time: string) => {
+    const existingDateTime = routeFormData[name as keyof RouteCreate] as string;
+    if (existingDateTime) {
+      const existingDate = new Date(existingDateTime);
+      const formatted = `${existingDate.getFullYear()}-${String(existingDate.getMonth() + 1).padStart(2, '0')}-${String(existingDate.getDate()).padStart(2, '0')}T${time}`;
+      
+      setRouteFormData(prev => ({
+        ...prev,
+        [name]: formatted,
+      }));
+    }
+  };
+
+  const formatDateTimeForDisplay = (dateString: string): string => {
+    if (!dateString) return '';
+    const date = new Date(dateString);
+    return `${date.toLocaleDateString()} ${date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}`;
+  };
+
+  const getTimeFromDateTime = (dateString: string): string => {
+    if (!dateString) return '09:00';
+    return new Date(dateString).toTimeString().slice(0, 5);
   };
 
   const handleRouteSubmit = async (e: React.FormEvent) => {
@@ -276,7 +338,12 @@ const RoutePage: React.FC = () => {
           </CardHeader>
           <CardContent>
             <div className="w-full h-[500px]">
-              <RouteMap/>
+              <RouteMap
+                routes={routes}
+                vessels={vessels}
+                ports={ports}
+                selectedRouteId={selectedRouteForMap}
+              />
             </div>
           </CardContent>
         </Card>
@@ -294,80 +361,133 @@ const RoutePage: React.FC = () => {
           <form id="routeForm" onSubmit={handleRouteSubmit} className="space-y-4">
             <div>
               <label className="block mb-1 text-sm font-medium">Vessel</label>
-              <select
-                name="vessel_id"
-                value={routeFormData.vessel_id}
-                onChange={handleInputChange}
-                className="w-full p-2 border rounded focus:ring-2 focus:ring-[#61adde] focus:border-transparent"
-                required
+              <Select
+                value={routeFormData.vessel_id ? String(routeFormData.vessel_id) : ""}
+                onValueChange={(value) => handleSelectChange('vessel_id', value)}
               >
-                <option value="">Select Vessel</option>
-                {vessels.map(vessel => (
-                  <option key={vessel.id} value={vessel.id}>
-                    {vessel.vessel_name}
-                  </option>
-                ))}
-              </select>
+                <SelectTrigger className="w-full">
+                  <SelectValue placeholder="Select Vessel" />
+                </SelectTrigger>
+                <SelectContent>
+                  {vessels.map(vessel => (
+                    <SelectItem key={vessel.id} value={String(vessel.id)}>
+                      {vessel.vessel_name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
             </div>
 
             <div>
               <label className="block mb-1 text-sm font-medium">Departure Port</label>
-              <select
-                name="departure_port_id"
-                value={routeFormData.departure_port_id}
-                onChange={handleInputChange}
-                className="w-full p-2 border rounded focus:ring-2 focus:ring-[#61adde] focus:border-transparent"
-                required
+              <Select
+                value={routeFormData.departure_port_id ? String(routeFormData.departure_port_id) : ""}
+                onValueChange={(value) => handleSelectChange('departure_port_id', value)}
               >
-                <option value="">Select Departure Port</option>
-                {ports.map(port => (
-                  <option key={port.id} value={port.id}>
-                    {port.port_name} ({port.country})
-                  </option>
-                ))}
-              </select>
+                <SelectTrigger className="w-full">
+                  <SelectValue placeholder="Select Departure Port" />
+                </SelectTrigger>
+                <SelectContent>
+                  {ports.map(port => (
+                    <SelectItem key={port.id} value={String(port.id)}>
+                      {port.port_name} ({port.country})
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
             </div>
 
             <div>
               <label className="block mb-1 text-sm font-medium">Arrival Port</label>
-              <select
-                name="arrival_port_id"
-                value={routeFormData.arrival_port_id}
-                onChange={handleInputChange}
-                className="w-full p-2 border rounded focus:ring-2 focus:ring-[#61adde] focus:border-transparent"
-                required
+              <Select
+                value={routeFormData.arrival_port_id ? String(routeFormData.arrival_port_id) : ""}
+                onValueChange={(value) => handleSelectChange('arrival_port_id', value)}
               >
-                <option value="">Select Arrival Port</option>
-                {ports.map(port => (
-                  <option key={port.id} value={port.id}>
-                    {port.port_name} ({port.country})
-                  </option>
-                ))}
-              </select>
+                <SelectTrigger className="w-full">
+                  <SelectValue placeholder="Select Arrival Port" />
+                </SelectTrigger>
+                <SelectContent>
+                  {ports.map(port => (
+                    <SelectItem key={port.id} value={String(port.id)}>
+                      {port.port_name} ({port.country})
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
             </div>
 
             <div>
               <label className="block mb-1 text-sm font-medium">Scheduled Departure</label>
-              <input
-                type="datetime-local"
-                name="scheduled_departure"
-                value={routeFormData.scheduled_departure}
-                onChange={handleInputChange}
-                className="w-full p-2 border rounded focus:ring-2 focus:ring-[#61adde] focus:border-transparent"
-                required
-              />
+              <Popover>
+                <PopoverTrigger asChild>
+                  <Button
+                    variant="outline"
+                    className="w-full justify-start text-left font-normal"
+                  >
+                    <CalendarIcon className="mr-2 h-4 w-4" />
+                    {routeFormData.scheduled_departure ? 
+                      formatDateTimeForDisplay(routeFormData.scheduled_departure) : 
+                      "Select departure date & time"
+                    }
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent className="w-auto p-0" align="start">
+                  <div className="p-3">
+                    <Calendar
+                      mode="single"
+                      selected={routeFormData.scheduled_departure ? new Date(routeFormData.scheduled_departure) : undefined}
+                      onSelect={(date) => handleDateChange('scheduled_departure', date)}
+                      initialFocus
+                    />
+                    <div className="mt-3 pt-3 border-t">
+                      <label className="block text-sm font-medium mb-1">Time</label>
+                      <input
+                        type="time"
+                        value={getTimeFromDateTime(routeFormData.scheduled_departure)}
+                        onChange={(e) => handleTimeChange('scheduled_departure', e.target.value)}
+                        className="w-full p-2 border rounded focus:ring-2 focus:ring-[#61adde] focus:border-transparent"
+                      />
+                    </div>
+                  </div>
+                </PopoverContent>
+              </Popover>
             </div>
 
             <div>
               <label className="block mb-1 text-sm font-medium">Estimated Arrival</label>
-              <input
-                type="datetime-local"
-                name="estimated_arrival"
-                value={routeFormData.estimated_arrival}
-                onChange={handleInputChange}
-                className="w-full p-2 border rounded focus:ring-2 focus:ring-[#61adde] focus:border-transparent"
-                required
-              />
+              <Popover>
+                <PopoverTrigger asChild>
+                  <Button
+                    variant="outline"
+                    className="w-full justify-start text-left font-normal"
+                  >
+                    <CalendarIcon className="mr-2 h-4 w-4" />
+                    {routeFormData.estimated_arrival ? 
+                      formatDateTimeForDisplay(routeFormData.estimated_arrival) : 
+                      "Select arrival date & time"
+                    }
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent className="w-auto p-0" align="start">
+                  <div className="p-3">
+                    <Calendar
+                      mode="single"
+                      selected={routeFormData.estimated_arrival ? new Date(routeFormData.estimated_arrival) : undefined}
+                      onSelect={(date) => handleDateChange('estimated_arrival', date)}
+                      initialFocus
+                    />
+                    <div className="mt-3 pt-3 border-t">
+                      <label className="block text-sm font-medium mb-1">Time</label>
+                      <input
+                        type="time"
+                        value={getTimeFromDateTime(routeFormData.estimated_arrival)}
+                        onChange={(e) => handleTimeChange('estimated_arrival', e.target.value)}
+                        className="w-full p-2 border rounded focus:ring-2 focus:ring-[#61adde] focus:border-transparent"
+                      />
+                    </div>
+                  </div>
+                </PopoverContent>
+              </Popover>
             </div>
           </form>
           <DialogFooter>

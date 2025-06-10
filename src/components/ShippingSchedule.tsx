@@ -343,10 +343,10 @@ const ShippingSchedule: React.FC<ShippingScheduleProps> = ({
                           const portInfo = getPortInfo(portId || 0);
                           
                           return (
-                            <div key={eventIndex} className="mb-1">
+                          <div key={eventIndex} className="mb-1">
                               <div className={`w-full text-xs font-bold text-center p-1 rounded flex items-center justify-center gap-1 ${
-                                event.type === 'departure' ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'
-                              }`}>
+                              event.type === 'departure' ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'
+                            }`}>
                                 <ReactCountryFlag 
                                   countryCode={portInfo.country} 
                                   svg 
@@ -356,9 +356,9 @@ const ShippingSchedule: React.FC<ShippingScheduleProps> = ({
                                   }}
                                 />
                                 {event.port}
-                              </div>
-                              <div className="text-xs text-[#61adde] text-center">{event.time}</div>
                             </div>
+                            <div className="text-xs text-[#61adde] text-center">{event.time}</div>
+                          </div>
                           );
                         })}
                         
@@ -416,8 +416,8 @@ const ShippingSchedule: React.FC<ShippingScheduleProps> = ({
                                     </div>
                                   </>
                                 )}
-                              </>
-                            ) : (
+                                </>
+                              ) : (
                               // Straight line with arrow
                               <>
                                 {/* Full horizontal line */}
@@ -430,8 +430,8 @@ const ShippingSchedule: React.FC<ShippingScheduleProps> = ({
                                     <ArrowRight className="text-[#61adde] w-6 h-6 bg-background rounded-full p-1"/>
                                   )}
                                 </div>
-                              </>
-                            )}
+                                </>
+                              )}
                           </div>
                         )}
                       </div>
