@@ -15,7 +15,7 @@ import {
   FormMessage,
 } from "@/components/ui/form"
 import { addDays, format } from "date-fns"
-import { CalendarIcon, Loader2, Target, Award } from "lucide-react"
+import { CalendarIcon, Loader2, Target } from "lucide-react"
 import { cn } from "@/lib/utils"
 import { Calendar } from "@/components/ui/calendar"
 import {

@@ -1,6 +1,8 @@
-import React, { useState } from 'react';
-import { Map, List, Ship, ChevronDown } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import { Map, List, Ship, ChevronDown, ArrowRight, ArrowLeft, CornerDownLeft, CornerDownRight, CornerRightDown, CornerLeftDown } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import ReactCountryFlag from "react-country-flag";
+import { getCountryCode } from '@/utils/countryCodeMapping';
 import type { RouteResponse, VesselResponse, PortResponse } from '@/hooks/types';
 
 interface ShippingScheduleProps {
@@ -32,24 +34,16 @@ const ShippingSchedule: React.FC<ShippingScheduleProps> = ({
   showControls = true,
   compact = false
 }) => {
-  const [currentDate, setCurrentDate] = useState(new Date());
   const [selectedVesselId, setSelectedVesselId] = useState<number | null>(
     vessels.length > 0 ? vessels[0].id : null
   );
 
-  const getEarliestRouteDate = () => {
-    if (!selectedVesselId) return new Date();
-    
-    const vesselRoutes = routes.filter(route => route.vessel_id === selectedVesselId);
-    if (vesselRoutes.length === 0) return new Date();
-    
-    const earliestDate = vesselRoutes.reduce((earliest, route) => {
-      const routeDate = new Date(route.scheduled_departure);
-      return routeDate < earliest ? routeDate : earliest;
-    }, new Date(vesselRoutes[0].scheduled_departure));
-    
-    return earliestDate;
-  };
+  // Set the first vessel as default when vessels data is loaded
+  useEffect(() => {
+    if (vessels.length > 0 && selectedVesselId === null) {
+      setSelectedVesselId(vessels[0].id);
+    }
+  }, [vessels, selectedVesselId]);
 
   const getVesselName = (vesselId: number | null) => {
     if (!vesselId) return 'Unknown Vessel';
@@ -60,6 +54,17 @@ const ShippingSchedule: React.FC<ShippingScheduleProps> = ({
   const getPortCode = (portId: number) => {
     const port = ports.find(p => p.id === portId);
     return port?.port_code || port?.port_name?.substring(0, 3).toUpperCase() || 'UNK';
+  };
+
+  const getPortInfo = (portId: number) => {
+    const port = ports.find(p => p.id === portId);
+    const countryName = port?.country || 'United States';
+    return {
+      code: port?.port_code || port?.port_name?.substring(0, 3).toUpperCase() || 'UNK',
+      country: getCountryCode(countryName),
+      countryName: countryName,
+      name: port?.port_name || 'Unknown Port'
+    };
   };
 
   const generateScheduleEvents = (): ScheduleEvent[] => {
@@ -108,28 +113,54 @@ const ShippingSchedule: React.FC<ShippingScheduleProps> = ({
   };
 
   const generateWeekDays = () => {
-    const days = [];
-    const totalDays = 28; // 4 weeks total, but we'll display as 2 rows of 14 days each
-    const startDate = getEarliestRouteDate();
+    if (!selectedVesselId) return [];
     
-    for (let i = -7; i <= totalDays - 8; i++) {
-      const date = new Date(startDate);
-      date.setDate(date.getDate() + i);
-      const today = new Date();
+    const vesselRoutes = routes.filter(route => route.vessel_id === selectedVesselId);
+    if (vesselRoutes.length === 0) return [];
+    
+    // Find earliest departure and latest arrival dates
+    let earliestDate = new Date(vesselRoutes[0].scheduled_departure);
+    let latestDate = new Date(vesselRoutes[0].estimated_arrival);
+    
+    vesselRoutes.forEach(route => {
+      const departureDate = new Date(route.scheduled_departure);
+      const arrivalDate = new Date(route.estimated_arrival);
+      
+      if (departureDate < earliestDate) earliestDate = departureDate;
+      if (arrivalDate > latestDate) latestDate = arrivalDate;
+    });
+    
+    // Add buffer days (7 days before earliest, 7 days after latest)
+    const startDate = new Date(earliestDate);
+    startDate.setDate(startDate.getDate() - 7);
+    
+    const endDate = new Date(latestDate);
+    endDate.setDate(endDate.getDate() + 7);
+    
+    // Generate all days in the range
+    const days = [];
+    const currentDate = new Date(startDate);
+    const today = new Date();
+    
+    while (currentDate <= endDate) {
       days.push({
-        day: date.getDate(),
-        weekday: date.toLocaleDateString('en', { weekday: 'short' }).toUpperCase(),
-        isToday: date.toDateString() === today.toDateString(),
-        date: date
+        day: currentDate.getDate(),
+        weekday: currentDate.toLocaleDateString('en', { weekday: 'short' }).toUpperCase(),
+        isToday: currentDate.toDateString() === today.toDateString(),
+        date: new Date(currentDate)
       });
+      currentDate.setDate(currentDate.getDate() + 1);
     }
     
-    // Organize into "Z" pattern: 2 weeks (14 days) per row
+    // Organize into rows of 14 days each
     const rows = [];
-    for (let row = 0; row < 2; row++) {
-      const rowDays = days.slice(row * 14, (row + 1) * 14);
+    const daysPerRow = 14;
+    for (let i = 0; i < days.length; i += daysPerRow) {
+      const rowDays = days.slice(i, i + daysPerRow);
+      const rowIndex = Math.floor(i / daysPerRow);
+      
       // Reverse every other row for "Z" pattern
-      if (row % 2 === 1) {
+      if (rowIndex % 2 === 1) {
         rowDays.reverse();
       }
       rows.push(rowDays);
@@ -229,13 +260,6 @@ const ShippingSchedule: React.FC<ShippingScheduleProps> = ({
                          className={`text-center p-2 text-sm rounded border-b border-[#61adde]/20 relative ${day.isToday ? 'bg-[#61adde]/10 text-[#4670bc]' : 'text-muted-foreground'}`}>
                       <div className="font-bold">{day.day}</div>
                       <div className="text-xs">{day.weekday}</div>
-                      
-                      {/* Ship icon for today */}
-                      {day.isToday && (
-                        <div className="absolute top-1 right-1">
-                          <Ship className="h-3 w-3 text-[#61adde]" />
-                        </div>
-                      )}
                     </div>
                   ))}
                   
@@ -248,39 +272,166 @@ const ShippingSchedule: React.FC<ShippingScheduleProps> = ({
                     const hasRoute = hasActiveRoute(day.date);
                     const isReversedRow = rowIndex % 2 === 1;
                     const shouldShowArrows = hasRoute && dayEvents.length === 0 && !day.isToday;
+                    const isPastDate = day.date < new Date(new Date().setHours(0, 0, 0, 0));
+                    
+                    // Check if this is a connecting point between rows
+                    const isRightmost = dayIndex === row.length - 1;
+                    const isLeftmost = dayIndex === 0;
+                    const allRows = generateWeekDays();
+                    const nextRow = allRows[rowIndex + 1];
+                    const prevRow = allRows[rowIndex - 1];
+                    
+                    let cornerArrowType = null;
+                    
+                    if (hasRoute && dayEvents.length === 0 && !day.isToday) {
+                      // Check for corner arrows based on position and connections
+                      if (isReversedRow) {
+                        if (isRightmost && prevRow) {
+                          // Rightest date in reversed row, check upside date
+                          const upsideDay = prevRow[prevRow.length - 1]; // Rightest of previous row
+                          if (hasActiveRoute(upsideDay.date)) {
+                            cornerArrowType = 'CornerDownLeft';
+                          }
+                        } else if (isLeftmost && nextRow) {
+                          // Leftest date in reversed row, check downside date  
+                          const downsideDay = nextRow[0]; // Leftest of next row
+                          if (hasActiveRoute(downsideDay.date)) {
+                            cornerArrowType = 'CornerLeftDown';
+                          }
+                        }
+                      } else {
+                        if (isLeftmost && prevRow) {
+                          // Leftest date in normal row, check upside date
+                          const upsideDay = prevRow[0]; // Leftest of previous row
+                          if (hasActiveRoute(upsideDay.date)) {
+                            cornerArrowType = 'CornerDownRight';
+                          }
+                        } else if (isRightmost && nextRow) {
+                          // Rightest date in normal row, check downside date
+                          const downsideDay = nextRow[nextRow.length - 1]; // Rightest of next row
+                          if (hasActiveRoute(downsideDay.date)) {
+                            cornerArrowType = 'CornerRightDown';
+                          }
+                        }
+                      }
+                    }
                     
                     return (
                       <div key={`event-${rowIndex}-${dayIndex}`} 
                            className="min-h-[60px] relative">
-                        {dayEvents.map((event, eventIndex) => (
-                          <div key={eventIndex} className="mb-1">
-                            <div className={`w-full text-xs font-bold text-center p-1 rounded ${
-                              event.type === 'departure' ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'
-                            }`}>
-                              {'⚓'} {event.port}
-                            </div>
-                            <div className="text-xs text-[#61adde] text-center">{event.time}</div>
-                          </div>
-                        ))}
+                        {/* Ship icon for today */}
+                        {day.isToday && (
+                          <Ship className="absolute h-full w-full text-[#61adde]" />
+                        )}
                         
-                        {/* Active route indicator line with arrows - only for active dates with no events */}
-                        {shouldShowArrows && (
-                          <div className="absolute bottom-2 left-0 right-0 flex items-center justify-center">
-                            <div className="flex items-center w-full">
-                              {isReversedRow ? (
-                                <>
-                                  <div className="text-[#61adde] text-xs">←</div>
-                                  <div className="flex-1 h-0.5 bg-[#61adde] mx-1"></div>
-                                  <div className="text-[#61adde] text-xs">←</div>
-                                </>
-                              ) : (
-                                <>
-                                  <div className="text-[#61adde] text-xs">→</div>
-                                  <div className="flex-1 h-0.5 bg-[#61adde] mx-1"></div>
-                                  <div className="text-[#61adde] text-xs">→</div>
-                                </>
-                              )}
+                        {dayEvents.map((event, eventIndex) => {
+                          // Get port information for the event
+                          const vesselRoutes = routes.filter(route => route.vessel_id === selectedVesselId);
+                          const eventRoute = vesselRoutes.find(route => {
+                            const departureDate = new Date(route.scheduled_departure).toDateString();
+                            const arrivalDate = new Date(route.estimated_arrival).toDateString();
+                            const eventDate = event.date.toDateString();
+                            
+                            return (event.type === 'departure' && departureDate === eventDate) ||
+                                   (event.type === 'arrival' && arrivalDate === eventDate);
+                          });
+                          
+                          const portId = event.type === 'departure' 
+                            ? eventRoute?.departure_port_id 
+                            : eventRoute?.arrival_port_id;
+                          
+                          const portInfo = getPortInfo(portId || 0);
+                          
+                          return (
+                            <div key={eventIndex} className="mb-1">
+                              <div className={`w-full text-xs font-bold text-center p-1 rounded flex items-center justify-center gap-1 ${
+                                event.type === 'departure' ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'
+                              }`}>
+                                <ReactCountryFlag 
+                                  countryCode={portInfo.country} 
+                                  svg 
+                                  style={{
+                                    width: '14px',
+                                    height: '10px',
+                                  }}
+                                />
+                                {event.port}
+                              </div>
+                              <div className="text-xs text-[#61adde] text-center">{event.time}</div>
                             </div>
+                          );
+                        })}
+                        
+                        {/* Active route indicator with appropriate arrow */}
+                        {(shouldShowArrows || cornerArrowType) && (
+                          <div className={`absolute inset-0 ${isPastDate ? 'opacity-30' : ''}`}>
+                            {cornerArrowType ? (
+                              // Corner arrows with connecting lines
+                              <>
+                                {cornerArrowType === 'CornerDownLeft' && (
+                                  <>
+                                    {/* Half vertical line on top */}
+                                    <div className="absolute top-0 left-1/2 transform -translate-x-1/2 w-0.5 h-1/2 bg-[#61adde]"></div>
+                                    {/* Half horizontal line on left */}
+                                    <div className="absolute top-1/2 left-0 transform -translate-y-1/2 w-1/2 h-0.5 bg-[#61adde]"></div>
+                                    {/* Corner arrow */}
+                                    <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2">
+                                      <CornerDownLeft className="text-[#61adde] w-6 h-6 bg-background rounded-full p-1"/>
+                                    </div>
+                                  </>
+                                )}
+                                {cornerArrowType === 'CornerDownRight' && (
+                                  <>
+                                    {/* Half vertical line on top */}
+                                    <div className="absolute top-0 left-1/2 transform -translate-x-1/2 w-0.5 h-1/2 bg-[#61adde]"></div>
+                                    {/* Half horizontal line on right */}
+                                    <div className="absolute top-1/2 right-0 transform -translate-y-1/2 w-1/2 h-0.5 bg-[#61adde]"></div>
+                                    {/* Corner arrow */}
+                                    <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2">
+                                      <CornerDownRight className="text-[#61adde] w-6 h-6 bg-background rounded-full p-1"/>
+                                    </div>
+                                  </>
+                                )}
+                                {cornerArrowType === 'CornerRightDown' && (
+                                  <>
+                                    {/* Half horizontal line on left */}
+                                    <div className="absolute top-1/2 left-0 transform -translate-y-1/2 w-1/2 h-0.5 bg-[#61adde]"></div>
+                                    {/* Half vertical line on bottom */}
+                                    <div className="absolute bottom-0 left-1/2 transform -translate-x-1/2 w-0.5 h-1/2 bg-[#61adde]"></div>
+                                    {/* Corner arrow */}
+                                    <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2">
+                                      <CornerRightDown className="text-[#61adde] w-6 h-6 bg-background rounded-full p-1"/>
+                                    </div>
+                                  </>
+                                )}
+                                {cornerArrowType === 'CornerLeftDown' && (
+                                  <>
+                                    {/* Half horizontal line on right */}
+                                    <div className="absolute top-1/2 right-0 transform -translate-y-1/2 w-1/2 h-0.5 bg-[#61adde]"></div>
+                                    {/* Half vertical line on bottom */}
+                                    <div className="absolute bottom-0 left-1/2 transform -translate-x-1/2 w-0.5 h-1/2 bg-[#61adde]"></div>
+                                    {/* Corner arrow */}
+                                    <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2">
+                                      <CornerLeftDown className="text-[#61adde] w-6 h-6 bg-background rounded-full p-1"/>
+                                    </div>
+                                  </>
+                                )}
+                              </>
+                            ) : (
+                              // Straight line with arrow
+                              <>
+                                {/* Full horizontal line */}
+                                <div className="absolute top-1/2 left-0 right-0 transform -translate-y-1/2 h-0.5 bg-[#61adde]"></div>
+                                {/* Overlapping arrow in center */}
+                                <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2">
+                                  {isReversedRow ? (
+                                    <ArrowLeft className="text-[#61adde] w-6 h-6 bg-background rounded-full p-1"/>
+                                  ) : (
+                                    <ArrowRight className="text-[#61adde] w-6 h-6 bg-background rounded-full p-1"/>
+                                  )}
+                                </div>
+                              </>
+                            )}
                           </div>
                         )}
                       </div>
@@ -288,20 +439,6 @@ const ShippingSchedule: React.FC<ShippingScheduleProps> = ({
                   })}
                 </React.Fragment>
               ))}
-            </div>
-            
-            {/* Vessel Icon and Progress */}
-            <div className="flex items-center justify-between mt-4 p-2 bg-muted/30 rounded">
-              <div className="flex items-center space-x-2">
-                <div className="w-8 h-6 bg-[#61adde] rounded flex items-center justify-center">
-                  <Ship className="w-4 h-4 text-white" />
-                </div>
-                <span className="text-sm font-medium">Active Route</span>
-              </div>
-              <div className="flex items-center space-x-4 text-sm">
-                <span className="text-muted-foreground">+{Math.floor(Math.random() * 200)}h</span>
-                <span className="font-bold text-[#61adde]">{(Math.random() * 20).toFixed(1)}kt</span>
-              </div>
             </div>
           </CardContent>
         </Card>
