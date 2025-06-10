@@ -319,6 +319,16 @@ const HistoryPage = () => {
             <CardTitle>
               Forecast History for {appliedFilters.product}
             </CardTitle>
+            <div className="text-sm text-gray-600">
+              <p>
+                <strong>Total Records:</strong> {filteredHistoryData.length} forecasts
+              </p>
+              {historyData.length > filteredHistoryData.length && (
+                <p className="text-xs text-amber-600">
+                  ({historyData.length - filteredHistoryData.length} records filtered out by date range)
+                </p>
+              )}
+            </div>
           </CardHeader>
           <CardContent>
             {isHistoryLoading ? (
@@ -328,16 +338,91 @@ const HistoryPage = () => {
               </div>
             ) : filteredHistoryData.length > 0 ? (
               <div className="space-y-6">
-                <div className="text-sm text-gray-600">
-                  <p>
-                    <strong>Total Records:</strong> {filteredHistoryData.length} forecasts
-                  </p>
-                  {historyData.length > filteredHistoryData.length && (
-                    <p className="text-xs text-amber-600">
-                      ({historyData.length - filteredHistoryData.length} records filtered out by date range)
-                    </p>
-                  )}
-                </div>
+                {isAccuracyLoading ? (
+                  <div className="flex items-center justify-center py-8">
+                    <Loader2 className="h-8 w-8 animate-spin" />
+                    <span className="ml-2">Loading performance metrics...</span>
+                  </div>
+                ) : (
+                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+                    {/* MAE */}
+                    {accuracyData.length > 0 && (
+                      <div className="bg-blue-50 p-4 rounded-lg border border-blue-200">
+                        <div className="flex items-center gap-2 mb-2">
+                          <Target className="h-4 w-4 text-blue-600" />
+                          <h4 className="font-semibold text-blue-900">MAE</h4>
+                        </div>
+                        <p className="text-2xl font-bold text-blue-700">
+                          ${accuracyData[0]?.mae?.toFixed(2) || 'N/A'}
+                        </p>
+                        <p className="text-xs text-blue-600">Mean Absolute Error</p>
+                      </div>
+                    )}
+
+                    {/* MAPE */}
+                    {accuracyData.length > 0 && (
+                      <div className="bg-green-50 p-4 rounded-lg border border-green-200">
+                        <div className="flex items-center gap-2 mb-2">
+                          <Target className="h-4 w-4 text-green-600" />
+                          <h4 className="font-semibold text-green-900">MAPE</h4>
+                        </div>
+                        <p className="text-2xl font-bold text-green-700">
+                          {accuracyData[0]?.mape?.toFixed(2) || 'N/A'}%
+                        </p>
+                        <p className="text-xs text-green-600">Mean Absolute Percentage Error</p>
+                      </div>
+                    )}
+
+                    {/* Exact Matches (MAPE < 1%) */}
+                    {performanceMetrics && (
+                      <div className="bg-purple-50 p-4 rounded-lg border border-purple-200">
+                        <div className="flex items-center gap-2 mb-2">
+                          <Target className="h-4 w-4 text-purple-600" />
+                          <h4 className="font-semibold text-purple-900">High Accuracy</h4>
+                        </div>
+                        <p className="text-2xl font-bold text-purple-700">
+                          {performanceMetrics.exactMatches}/{performanceMetrics.totalForecasts}
+                        </p>
+                        <div className="space-y-1">
+                          <p className="text-xs text-purple-600">
+                            {performanceMetrics.exactMatchRate.toFixed(1)}% Accuracy
+                          </p>
+                          <p className="text-[10px] text-purple-500">
+                            (Forecasts with MAPE under 1%)
+                          </p>
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Confidence Band Coverage */}
+                    {performanceMetrics && performanceMetrics.hasConfidenceIntervals && (
+                      <div className="bg-orange-50 p-4 rounded-lg border border-orange-200">
+                        <div className="flex items-center gap-2 mb-2">
+                          <Target className="h-4 w-4 text-orange-600" />
+                          <h4 className="font-semibold text-orange-900">Coverage</h4>
+                        </div>
+                        <p className="text-2xl font-bold text-orange-700">
+                          {performanceMetrics.withinConfidenceBand}/{performanceMetrics.totalForecasts}
+                        </p>
+                        <p className="text-xs text-orange-600">
+                          {performanceMetrics.confidenceCoverage?.toFixed(1)}% within confidence band
+                        </p>
+                      </div>
+                    )}
+
+                    {/* No confidence intervals message */}
+                    {performanceMetrics && !performanceMetrics.hasConfidenceIntervals && (
+                      <div className="bg-gray-50 p-4 rounded-lg border border-gray-200">
+                        <div className="flex items-center gap-2 mb-2">
+                          <Target className="h-4 w-4 text-gray-600" />
+                          <h4 className="font-semibold text-gray-900">Coverage</h4>
+                        </div>
+                        <p className="text-sm text-gray-700">N/A</p>
+                        <p className="text-xs text-gray-600">No confidence intervals available</p>
+                      </div>
+                    )}
+                  </div>
+                )}
                 
                 {/* History Chart */}
                 <div className="bg-white">
@@ -345,100 +430,6 @@ const HistoryPage = () => {
                     data={filteredHistoryData}
                     title={`${appliedFilters.product} - ${appliedFilters.forecastDays} Days Ahead Forecast History`}
                   />
-                </div>
-
-                {/* Model Performance Metrics */}
-                <div className="pt-3 border-t border-gray-200">
-                  <h3 className="text-lg font-semibold mb-3 flex items-center gap-2">
-                    <Award className="h-5 w-5" />
-                    Model Performance Metrics
-                  </h3>
-                  
-                  {isAccuracyLoading ? (
-                    <div className="flex items-center justify-center py-8">
-                      <Loader2 className="h-8 w-8 animate-spin" />
-                      <span className="ml-2">Loading performance metrics...</span>
-                    </div>
-                  ) : (
-                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-                      {/* MAE */}
-                      {accuracyData.length > 0 && (
-                        <div className="bg-blue-50 p-4 rounded-lg border border-blue-200">
-                          <div className="flex items-center gap-2 mb-2">
-                            <Target className="h-4 w-4 text-blue-600" />
-                            <h4 className="font-semibold text-blue-900">MAE</h4>
-                          </div>
-                          <p className="text-2xl font-bold text-blue-700">
-                            ${accuracyData[0]?.mae?.toFixed(2) || 'N/A'}
-                          </p>
-                          <p className="text-xs text-blue-600">Mean Absolute Error</p>
-                        </div>
-                      )}
-
-                      {/* MAPE */}
-                      {accuracyData.length > 0 && (
-                        <div className="bg-green-50 p-4 rounded-lg border border-green-200">
-                          <div className="flex items-center gap-2 mb-2">
-                            <Target className="h-4 w-4 text-green-600" />
-                            <h4 className="font-semibold text-green-900">MAPE</h4>
-                          </div>
-                          <p className="text-2xl font-bold text-green-700">
-                            {accuracyData[0]?.mape?.toFixed(2) || 'N/A'}%
-                          </p>
-                          <p className="text-xs text-green-600">Mean Absolute Percentage Error</p>
-                        </div>
-                      )}
-
-                      {/* Exact Matches (MAPE < 1%) */}
-                      {performanceMetrics && (
-                        <div className="bg-purple-50 p-4 rounded-lg border border-purple-200">
-                          <div className="flex items-center gap-2 mb-2">
-                            <Target className="h-4 w-4 text-purple-600" />
-                            <h4 className="font-semibold text-purple-900">High Accuracy</h4>
-                          </div>
-                          <p className="text-2xl font-bold text-purple-700">
-                            {performanceMetrics.exactMatches}/{performanceMetrics.totalForecasts}
-                          </p>
-                          <div className="space-y-1">
-                            <p className="text-xs text-purple-600">
-                              {performanceMetrics.exactMatchRate.toFixed(1)}% Accuracy
-                            </p>
-                            <p className="text-[10px] text-purple-500">
-                              (Forecasts with MAPE under 1%)
-                            </p>
-                          </div>
-                        </div>
-                      )}
-
-                      {/* Confidence Band Coverage */}
-                      {performanceMetrics && performanceMetrics.hasConfidenceIntervals && (
-                        <div className="bg-orange-50 p-4 rounded-lg border border-orange-200">
-                          <div className="flex items-center gap-2 mb-2">
-                            <Target className="h-4 w-4 text-orange-600" />
-                            <h4 className="font-semibold text-orange-900">Coverage</h4>
-                          </div>
-                          <p className="text-2xl font-bold text-orange-700">
-                            {performanceMetrics.withinConfidenceBand}/{performanceMetrics.totalForecasts}
-                          </p>
-                          <p className="text-xs text-orange-600">
-                            {performanceMetrics.confidenceCoverage?.toFixed(1)}% within confidence band
-                          </p>
-                        </div>
-                      )}
-
-                      {/* No confidence intervals message */}
-                      {performanceMetrics && !performanceMetrics.hasConfidenceIntervals && (
-                        <div className="bg-gray-50 p-4 rounded-lg border border-gray-200">
-                          <div className="flex items-center gap-2 mb-2">
-                            <Target className="h-4 w-4 text-gray-600" />
-                            <h4 className="font-semibold text-gray-900">Coverage</h4>
-                          </div>
-                          <p className="text-sm text-gray-700">N/A</p>
-                          <p className="text-xs text-gray-600">No confidence intervals available</p>
-                        </div>
-                      )}
-                    </div>
-                  )}
                 </div>
               </div>
             ) : (

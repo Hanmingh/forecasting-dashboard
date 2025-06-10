@@ -3,6 +3,7 @@ import { useRoute } from '../hooks/use-route';
 import { useVessel } from '../hooks/use-vessel';
 import { usePort } from '../hooks/use-port';
 import RouteMap from '../components/route_map';
+import ShippingSchedule from '../components/ShippingSchedule';
 import type { RouteResponse, RouteCreate, VesselResponse, PortResponse } from '../hooks/types';
 import {
   Card,
@@ -268,6 +269,28 @@ const RoutePage: React.FC = () => {
           </CardContent>
         </Card>
 
+        {/* Shipping Schedule Section */}
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-[#61adde]">Shipping Schedule Timeline</CardTitle>
+            <CardDescription>Detailed timeline view of all routes and vessel schedules</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <ShippingSchedule
+              routes={routes}
+              vessels={vessels}
+              ports={ports}
+              title="Route Timeline"
+              subtitle={`${routes.length} active routes`}
+              showControls={true}
+              compact={false}
+              onRouteClick={(route) => {
+                setSelectedRouteForMap(selectedRouteForMap === route.id ? undefined : route.id);
+              }}
+            />
+          </CardContent>
+        </Card>
+
         {/* Route Map Section */}
         <Card>
           <CardHeader>
@@ -276,11 +299,7 @@ const RoutePage: React.FC = () => {
           </CardHeader>
           <CardContent>
             <div className="w-full h-[500px]">
-              <RouteMap 
-                routes={routes} 
-                ports={ports} 
-                selectedRouteId={selectedRouteForMap}
-              />
+              <RouteMap/>
             </div>
           </CardContent>
         </Card>

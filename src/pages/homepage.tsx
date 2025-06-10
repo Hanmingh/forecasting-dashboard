@@ -7,9 +7,13 @@ import {
 import { Button } from "@/components/ui/button";
 import { useLatestForecasts } from "@/hooks/use-forecasts";
 import { useColorPreferences } from "@/hooks/use-color-preferences";
+import { useRoute } from "@/hooks/use-route";
+import { useVessel } from "@/hooks/use-vessel";
+import { usePort } from "@/hooks/use-port";
 import { useState, useEffect, useMemo } from "react";
 import { Star, TrendingUp, TrendingDown } from "lucide-react";
-import type { Forecast } from "@/hooks/types";
+import type { Forecast, RouteResponse, VesselResponse, PortResponse } from "@/hooks/types";
+import ShippingSchedule from "@/components/ShippingSchedule";
 
 interface FavoriteProduct {
   product: string;
@@ -18,6 +22,9 @@ interface FavoriteProduct {
 
 const Homepage = () => {
   const [favorites, setFavorites] = useState<FavoriteProduct[]>([]);
+  const [routes, setRoutes] = useState<RouteResponse[]>([]);
+  const [vessels, setVessels] = useState<VesselResponse[]>([]);
+  const [ports, setPorts] = useState<PortResponse[]>([]);
   const { getUpColor, getDownColor } = useColorPreferences();
 
   // Load favorites from localStorage on mount
@@ -34,6 +41,30 @@ const Homepage = () => {
 
   // Fetch latest forecasts
   const { data: latestForecasts = [], isLoading: isForecastsLoading } = useLatestForecasts();
+
+  // Fetch routes, vessels, and ports data
+  const { fetchRoutes } = useRoute();
+  const { fetchVessels } = useVessel();
+  const { fetchPorts } = usePort();
+
+  useEffect(() => {
+    const loadShippingData = async () => {
+      try {
+        const [routesData, vesselsData, portsData] = await Promise.all([
+          fetchRoutes(),
+          fetchVessels(),
+          fetchPorts()
+        ]);
+        setRoutes(routesData || []);
+        setVessels(vesselsData || []);
+        setPorts(portsData || []);
+      } catch (error) {
+        console.error('Error loading shipping data:', error);
+      }
+    };
+
+    loadShippingData();
+  }, []);
 
   // Get latest forecasts for favorited products
   const favoriteForecasts = useMemo(() => {
@@ -172,6 +203,17 @@ const Homepage = () => {
           </CardContent>
         </Card>
       )}
+
+      {/* Shipping Schedule Section */}
+      <ShippingSchedule
+        routes={routes}
+        vessels={vessels}
+        ports={ports}
+        title="Shipping Schedule"
+        subtitle={`${routes.length} routes in system`}
+        showControls={true}
+        compact={false}
+      />
     </div>
   );
 };
