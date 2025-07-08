@@ -63,3 +63,10 @@ export interface PortResponse {
   port_type: string;
   is_active: boolean;
 }
+
+export interface OilIndicesResponse {
+  id: number;
+  symbol: string;
+  date: string;
+  close_price: number;
+}

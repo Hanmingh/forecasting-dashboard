@@ -20,9 +20,11 @@ import { useNavigate } from "react-router-dom";
 import { useForecast, /*useLatestForecasts,*/ } from "@/hooks/use-forecasts";
 import { useFavorites } from "@/hooks/use-favorites";
 import { useColorPreferences } from "@/hooks/use-color-preferences";
+import { useOilIndices } from "@/hooks/use-oil-indices";
 import { useMemo, useState } from "react";
 import type { Forecast } from "@/hooks/types";
 import { Slider } from "@/components/ui/slider";
+import OilIndicesChart from "@/components/OilIndicesChart";
 
 const formatPrice = (predicted: number | null): string => {
   if (predicted === null) return '-';
@@ -67,6 +69,17 @@ const ForecastPage = () => {
   const current_day = '2025-01-08'
   const { data: latestForecasts = [], isLoading, isError, error } = useForecast({current_date: current_day});
   // Just for demonstration, remove this when we have the latest forecasts query working
+
+  // Fetch oil indices data for the last 6 months
+  const sixMonthsAgo = new Date();
+  sixMonthsAgo.setMonth(sixMonthsAgo.getMonth() - 6);
+  const {
+    data: oilIndicesData = [],
+    isLoading: isOilIndicesLoading,
+  } = useOilIndices({
+    start_date: sixMonthsAgo.toISOString().split('T')[0],
+    limit: 500
+  });
 
   const navigate = useNavigate();
   const { isFavorite, toggleFavorite } = useFavorites();
@@ -184,11 +197,13 @@ const ForecastPage = () => {
       }
     });
 
-    // Create histogram bins
-    const bins = [-10, -5, -2, -1, -0.5, 0, 0.5, 1, 2, 5, 10];
+    // Create histogram bins (1% intervals from -10% to 10%)
+    const bins = Array.from({length: 21}, (_, i) => -10 + i);
     const histogram = bins.map((bin, index) => {
-      const nextBin = bins[index + 1] || Infinity;
-      const count = returns.filter(r => r >= bin && r < nextBin).length;
+      // For each bin, count returns that fall within [bin-0.5, bin+0.5)
+      const binStart = bin - 0.5;
+      const binEnd = bin + 0.5;
+      const count = returns.filter(r => r >= binStart && r < binEnd).length;
       return { bin, count, percentage: returns.length > 0 ? (count / returns.length) * 100 : 0 };
     });
 
@@ -220,13 +235,21 @@ const ForecastPage = () => {
           <CardTitle>Summary</CardTitle>
         </CardHeader>
         <CardContent>
-          <div className="grid grid-cols-2 gap-6">
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
             {/* Left Column - Controls and Stats */}
             <div className="space-y-4">
+              {/* Date Information */}
+              <div className="space-y-2 pb-4">
+                <div className="flex justify-between items-center">
+                  <span className="text-sm font-medium">Latest Update:</span>
+                  <span className="text-sm text-muted-foreground">{current_day}</span>
+                </div>
+              </div>
+              
               {/* Slider for day selection */}
               <div className="space-y-2">
                 <div className="flex justify-between items-center">
-                  <span className="text-xs font-bold">Forecast Day:</span>
+                  <span className="text-xs font-bold">Forecast Horizon:</span>
                   <span className="text-sm font-bold">{selectedDays} day</span>
                 </div>
                 <Slider
@@ -237,134 +260,108 @@ const ForecastPage = () => {
                   step={1}
                 />
                 <div className="flex justify-between text-xs text-muted-foreground">
-                  <span>1d</span>
-                  <span>30d</span>
-                  <span>60d</span>
+                  <span>1D</span>
+                  <span>30D</span>
+                  <span>60D</span>
                 </div>
               </div>
 
-              <div className="grid grid-cols-2 gap-4">
-                <div className="text-center p-3 rounded">
-                  <div className="text-lg font-bold">{rows.length}</div>
-                  <div className="text-xs">Products</div>
-                </div>
-                <div className="text-center p-3 rounded">
-                  <div className="text-lg font-bold">{latestForecasts.length}</div>
-                  <div className="text-xs">Forecasts</div>
-                </div>
-              </div>
-
-              <div className="space-y-2">
-                <div className="space-y-1">
-                  <div className="flex justify-between">
-                    <span>Average Return:</span>
-                    <span className={`font-medium ${
-                      gainersLosers.total > 0 && rows.length > 0 ? 
-                        (rows.reduce((sum, row) => {
-                          const forecastData = latestForecasts.find(f => 
-                            f.product === row.product && f.n_days_ahead === selectedDays
-                          );
-                          return sum + (forecastData?.predicted_value ? 
-                            ((forecastData.predicted_value - row.currentValue) / row.currentValue) * 100 : 0);
-                        }, 0) / rows.length >= 0 ? getUpColor() : getDownColor()) : ''
-                    }`}>
-                      {gainersLosers.total > 0 && rows.length > 0 ? 
-                        `${(rows.reduce((sum, row) => {
-                          const forecastData = latestForecasts.find(f => 
-                            f.product === row.product && f.n_days_ahead === selectedDays
-                          );
-                          return sum + (forecastData?.predicted_value ? 
-                            ((forecastData.predicted_value - row.currentValue) / row.currentValue) * 100 : 0);
-                        }, 0) / rows.length).toFixed(2)}%` : '0.00%'
+              {/* Forecast Distribution Histogram */}
+              <div className="h-[200px] flex flex-col">
+                <span className="text-xs font-medium mb-3">Forecast Distribution</span>
+                <div className="flex-1 flex min-h-0">
+                  {/* Y-axis */}
+                  <div className="w-8 flex flex-col justify-between text-right pr-1">
+                    {(() => {
+                      const maxPercentage = Math.max(...returnDistribution.map(d => d.percentage));
+                      const yAxisLabels = [];
+                      const steps = 4;
+                      for (let i = steps; i >= 0; i--) {
+                        const value = (maxPercentage * i) / steps;
+                        yAxisLabels.push(
+                          <span key={i} className="text-xs text-muted-foreground" style={{ fontSize: '9px' }}>
+                            {value.toFixed(0)}%
+                          </span>
+                        );
                       }
-                    </span>
+                      return yAxisLabels;
+                    })()}
                   </div>
-                  <div className="flex justify-between">
-                    <span>Bullish Products:</span>
-                    <span className={`${getUpColor()} font-medium`}>{gainersLosers.gainers}</span>
+                  
+                  {/* Chart area with grid */}
+                  <div className="flex-1 relative">
+                    {/* Grid lines */}
+                    <div className="absolute inset-0">
+                      {(() => {
+                        const gridLines = [];
+                        const steps = 4;
+                        for (let i = 0; i <= steps; i++) {
+                          gridLines.push(
+                            <div
+                              key={i}
+                              className="absolute w-full border-t border-gray-200"
+                              style={{ top: `${(i / steps) * 100}%` }}
+                            />
+                          );
+                        }
+                        return gridLines;
+                      })()}
+                    </div>
+                    
+                    {/* Histogram bars */}
+                    <div className="absolute inset-0 flex items-end justify-center">
+                      {returnDistribution.map((item, index) => {
+                        const maxPercentage = Math.max(...returnDistribution.map(d => d.percentage));
+                        const normalizedHeight = maxPercentage > 0 ? (item.percentage / maxPercentage) * 100 : 0;
+                        const minHeight = item.count > 0 ? 2 : 0;
+                        
+                        return (
+                          <div key={index} className="flex flex-col items-center h-full justify-end flex-1">
+                            <div 
+                              className="w-full"
+                              style={{ 
+                                height: `${Math.max(normalizedHeight, minHeight)}%`,
+                                backgroundColor: item.bin >= 0 ? getUpColorHex() : getDownColorHex()
+                              }}
+                            />
+                          </div>
+                        );
+                      })}
+                    </div>
                   </div>
-                  <div className="flex justify-between">
-                    <span>Bearish Products:</span>
-                    <span className={`${getDownColor()} font-medium`}>{gainersLosers.losers}</span>
-                  </div>
-                  <div className="flex justify-between">
-                    <span>Market Sentiment:</span>
-                    <span className={`font-medium ${
-                      gainersLosers.gainers > gainersLosers.losers ? getUpColor() : 
-                      gainersLosers.losers > gainersLosers.gainers ? getDownColor() : 'text-muted-foreground'
-                    }`}>
-                      {gainersLosers.gainers > gainersLosers.losers ? 'Bullish' : 
-                       gainersLosers.losers > gainersLosers.gainers ? 'Bearish' : 'Neutral'}
-                    </span>
-                  </div>
+                </div>
+                
+                {/* X-axis labels */}
+                <div className="flex ml-8 mt-1">
+                  {returnDistribution.map((item, index) => (
+                    <div key={index} className="flex flex-col items-center flex-1">
+                      <span className="text-xs text-center" style={{ fontSize: '9px' }}>
+                        {index % 5 === 0 ? `${item.bin >= 0 ? '+' : ''}${item.bin}%` : ''}
+                      </span>
+                    </div>
+                  ))}
                 </div>
               </div>
             </div>
 
             {/* Right Column - Visualizations */}
-            <div className="flex flex-col h-[300px] space-y-4">
-              {/* Forecast Distribution Histogram */}
-              <div className="h-[160px] flex flex-col">
-                <span className="text-xs font-medium mb-5">Forecast Distribution</span>
-                <div className="flex-1 flex items-end justify-center gap-1 min-h-0">
-                  {returnDistribution.slice(0, 10).map((item, index) => (
-                    <div key={index} className="flex flex-col items-center h-full justify-end">
-                      <div 
-                        className="w-3 rounded-t"
-                        style={{ 
-                          height: `${Math.min(Math.max(item.percentage * 4, 2), 75)}%`,
-                          backgroundColor: item.bin >= 0 ? getUpColorHex() : getDownColorHex()
-                        }}
-                      />
-                      <span className="text-xs mt-1 text-center w-8">
-                        {item.bin >= 0 ? '+' : ''}{item.bin}%
-                      </span>
-                      <span className="text-xs text-muted-foreground w-8 text-center">{item.count}</span>
-                    </div>
-                  ))}
-                </div>
-              </div>
-
-              {/* Gainers vs Losers Line */}
-              <div className="h-[100px] flex flex-col">
-                <div className="flex-1 flex flex-col justify-center">
-                  <div className="w-full bg-muted rounded-full h-2 flex overflow-hidden">
-                    <div 
-                      className="h-full" 
-                      style={{ 
-                        width: `${gainersLosers.total > 0 ? (gainersLosers.losers / gainersLosers.total) * 100 : 33.33}%`,
-                        backgroundColor: getDownColorHex()
-                      }}
-                    />
-                    <div 
-                      className="bg-muted-foreground h-full" 
-                      style={{ width: `${gainersLosers.total > 0 ? (gainersLosers.neutral / gainersLosers.total) * 100 : 33.33}%` }}
-                    />
-                    <div 
-                      className="h-full" 
-                      style={{ 
-                        width: `${gainersLosers.total > 0 ? (gainersLosers.gainers / gainersLosers.total) * 100 : 33.33}%`,
-                        backgroundColor: getUpColorHex()
-                      }}
+            <div className="flex flex-col space-y-4">
+              {/* Oil Indices Chart */}
+              <div className="flex flex-col">
+                <span className="text-xs font-medium mb-3">Oil Indices</span>
+                {isOilIndicesLoading ? (
+                  <div className="h-[320px] flex items-center justify-center text-muted-foreground">
+                    <span className="text-xs">Loading...</span>
+                  </div>
+                ) : (
+                  <div>
+                    <OilIndicesChart 
+                      data={oilIndicesData}
+                      title=""
+                      height={320}
                     />
                   </div>
-                  
-                  {/* Labels positioned below the line */}
-                  <div className="flex justify-between items-center mt-2 text-xs">
-                    <div className="flex flex-col items-start">
-                      <span className={`${getDownColor()} font-bold text-lg`}>{gainersLosers.losers}</span>
-                      <span className={getDownColor()}>Bearish</span>
-                    </div>
-                    <div className="flex flex-col items-center">
-                      <span className="text-muted-foreground font-bold text-lg">{gainersLosers.neutral}</span>
-                      <span>Neutral</span>
-                    </div>
-                    <div className="flex flex-col items-end">
-                      <span className={`${getUpColor()} font-bold text-lg`}>{gainersLosers.gainers}</span>
-                      <span className={getUpColor()}>Bullish</span>
-                    </div>
-                  </div>
-                </div>
+                )}
               </div>
             </div>
           </div>
@@ -386,19 +383,19 @@ const ForecastPage = () => {
               <TableRow>
                   <SortableHeader label="SYMBOL" sortKey="product" />
                   <SortableHeader label="PRICE" sortKey="currentValue" />
-                  <SortableHeader label="1-D Pred" sortKey="price1" />
+                  <SortableHeader label="1-D forecast" sortKey="price1" />
                   <SortableHeader label="1-D %Chg" sortKey="change1" />
-                  <SortableHeader label="5-D Pred" sortKey="price5" />
+                  <SortableHeader label="5-D forecast" sortKey="price5" />
                   <SortableHeader label="5-D %Chg" sortKey="change5" /> 
-                  <SortableHeader label="10-D Pred" sortKey="price10" />
+                  <SortableHeader label="10-D forecast" sortKey="price10" />
                   <SortableHeader label="10-D %Chg" sortKey="change10" />
-                  <SortableHeader label="15-D Pred" sortKey="price15" />
+                  <SortableHeader label="15-D forecast" sortKey="price15" />
                   <SortableHeader label="15-D %Chg" sortKey="change15" />
-                  <SortableHeader label="20-D Pred" sortKey="price20" />
+                  <SortableHeader label="20-D forecast" sortKey="price20" />
                   <SortableHeader label="20-D %Chg" sortKey="change20" />
-                  <SortableHeader label="30-D Pred" sortKey="price30" />
+                  <SortableHeader label="30-D forecast" sortKey="price30" />
                   <SortableHeader label="30-D %Chg" sortKey="change30" />
-                  <SortableHeader label="60-D Pred" sortKey="price60" />
+                  <SortableHeader label="60-D forecast" sortKey="price60" />
                   <SortableHeader label="60-D %Chg" sortKey="change60" />
               </TableRow>
             </TableHeader>

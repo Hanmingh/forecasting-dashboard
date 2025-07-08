@@ -1,6 +1,6 @@
 import axios, { type AxiosInstance, type InternalAxiosRequestConfig, type AxiosError } from 'axios';
 import { ACCESS_TOKEN, REFRESH_TOKEN } from './components/constants';
-import type { Forecast, VesselResponse, VesselCreate, RouteResponse, RouteCreate, PortResponse } from './hooks/types'
+import type { Forecast, VesselResponse, VesselCreate, RouteResponse, RouteCreate, PortResponse, OilIndicesResponse } from './hooks/types'
 
 const api: AxiosInstance = axios.create({
   baseURL: '/api',
@@ -160,6 +160,39 @@ export async function getPorts(params?: {
 
 export async function getPort(portId: number): Promise<PortResponse> {
   const res = await api.get<PortResponse>(`/ports/${portId}`);
+  return res.data;
+}
+
+// Oil Indices APIs
+export async function getOilIndices(params?: {
+  symbol?: string;
+  start_date?: string;
+  end_date?: string;
+  limit?: number;
+}): Promise<OilIndicesResponse[]> {
+  const res = await api.get<OilIndicesResponse[]>('/oil_indices', { params });
+  return res.data;
+}
+
+export async function getLatestOilIndices(): Promise<OilIndicesResponse[]> {
+  const res = await api.get<OilIndicesResponse[]>('/oil_indices/latest');
+  return res.data;
+}
+
+export async function getOilIndicesBySymbol(
+  symbol: string,
+  params?: {
+    start_date?: string;
+    end_date?: string;
+    limit?: number;
+  }
+): Promise<OilIndicesResponse[]> {
+  const res = await api.get<OilIndicesResponse[]>(`/oil_indices/${symbol}`, { params });
+  return res.data;
+}
+
+export async function getOilIndicesSummary(): Promise<any> {
+  const res = await api.get('/oil_indices/summary/all');
   return res.data;
 }
 
