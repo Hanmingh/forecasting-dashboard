@@ -5,7 +5,7 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { useLatestForecasts } from "@/hooks/use-forecasts";
+import { useMultiForecast } from "@/hooks/use-forecasts";
 import { useColorPreferences } from "@/hooks/use-color-preferences";
 import { useRoute } from "@/hooks/use-route";
 import { useVessel } from "@/hooks/use-vessel";
@@ -27,6 +27,9 @@ const Homepage = () => {
   const [ports, setPorts] = useState<PortResponse[]>([]);
   const { getUpColor, getDownColor } = useColorPreferences();
 
+  // Define forecast horizons
+  const FORECAST_HORIZONS = [1, 5, 30, 60];
+
   // Load favorites from localStorage on mount
   useEffect(() => {
     const savedFavorites = localStorage.getItem('forecast-favorites');
@@ -39,8 +42,46 @@ const Homepage = () => {
     }
   }, []);
 
-  // Fetch latest forecasts
-  const { data: latestForecasts = [], isLoading: isForecastsLoading } = useLatestForecasts();
+  // Create forecast requests for all favorite products and horizons
+  const forecastRequests = useMemo(() => {
+    return favorites.flatMap(favorite => 
+      FORECAST_HORIZONS.map(horizon => ({
+        product: favorite.product,
+        n_days_ahead: horizon,
+        head: 1 // Get only the latest forecast for each horizon
+      }))
+    );
+  }, [favorites]);
+
+  // Fetch forecasts for all favorite products and horizons
+  const forecastResults = useMultiForecast(forecastRequests);
+
+  // Process forecast data into a structured format
+  const favoriteForecasts = useMemo(() => {
+    const forecastsByProduct: Record<string, Record<number, Forecast | null>> = {};
+    
+    favorites.forEach(favorite => {
+      forecastsByProduct[favorite.product] = {};
+      FORECAST_HORIZONS.forEach(horizon => {
+        forecastsByProduct[favorite.product][horizon] = null;
+      });
+    });
+
+    forecastResults.forEach((result, index) => {
+      if (result.data && result.data.length > 0) {
+        const request = forecastRequests[index];
+        const forecast = result.data[0]; // Get the first (latest) forecast
+        if (forecastsByProduct[request.product!]) {
+          forecastsByProduct[request.product!][request.n_days_ahead!] = forecast;
+        }
+      }
+    });
+
+    return forecastsByProduct;
+  }, [forecastResults, favorites, forecastRequests]);
+
+  // Check if forecasts are loading
+  const isForecastsLoading = forecastResults.some(result => result.isLoading);
 
   // Fetch routes, vessels, and ports data
   const { fetchRoutes } = useRoute();
@@ -66,39 +107,30 @@ const Homepage = () => {
     loadShippingData();
   }, []);
 
-  // Get latest forecasts for favorited products
-  const favoriteForecasts = useMemo(() => {
-    const favoriteProductNames = favorites.map(f => f.product);
-    return latestForecasts.filter(forecast => 
-      favoriteProductNames.includes(forecast.product)
-    );
-  }, [latestForecasts, favorites]);
-
-  // Group forecasts by product for display
-  const forecastsByProduct = useMemo(() => {
-    return favoriteForecasts.reduce((acc, forecast) => {
-      if (!acc[forecast.product]) {
-        acc[forecast.product] = [];
-      }
-      acc[forecast.product].push(forecast);
-      return acc;
-    }, {} as Record<string, Forecast[]>);
-  }, [favoriteForecasts]);
-
   const removeFromFavorites = (product: string) => {
     const updatedFavorites = favorites.filter(f => f.product !== product);
     setFavorites(updatedFavorites);
     localStorage.setItem('forecast-favorites', JSON.stringify(updatedFavorites));
   };
 
-  const getPredictionTrend = (forecast: Forecast) => {
-    const change = forecast.predicted_value - forecast.current_value;
-    const changePercent = (change / forecast.current_value) * 100;
+  const getPredictionTrend = (currentValue: number, predictedValue: number) => {
+    const change = predictedValue - currentValue;
+    const changePercent = (change / currentValue) * 100;
     return {
       change,
       changePercent,
       isPositive: change > 0,
     };
+  };
+
+  const getCurrentValue = (productForecasts: Record<number, Forecast | null>) => {
+    // Get current value from any available forecast (they should all have the same current value)
+    for (const horizon of FORECAST_HORIZONS) {
+      if (productForecasts[horizon]) {
+        return productForecasts[horizon]!.current_value;
+      }
+    }
+    return null;
   };
 
   return (
@@ -126,74 +158,75 @@ const Homepage = () => {
             {/* Favorite Products Grid */}
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
               {favorites.map(favorite => {
-                const productForecasts = forecastsByProduct[favorite.product] || [];
-                const latestForecast = productForecasts.length > 0 
-                  ? productForecasts.reduce((latest, current) => 
-                      new Date(current.current_date) > new Date(latest.current_date) ? current : latest
-                    )
-                  : null;
+                const productForecasts = favoriteForecasts[favorite.product] || {};
+                const currentValue = getCurrentValue(productForecasts);
 
                 return (
                   <Card key={favorite.product} className="hover:shadow-md transition-shadow">
-                    <CardHeader className="pb-3">
+                    <CardContent className="space-y-2">
                       <div className="flex items-center justify-between">
                         <h3 className="font-semibold text-sm text-[#4670bc]">{favorite.product}</h3>
                         <Button
                           variant="ghost"
                           size="sm"
                           onClick={() => removeFromFavorites(favorite.product)}
-                          className="text-yellow-400 hover:text-red-500 p-1"
+                          className="text-yellow-400 hover:text-red-500"
                         >
                           <Star className="h-4 w-4 fill-current" />
                         </Button>
                       </div>
-                    </CardHeader>
-
-                    <CardContent className="space-y-2">
                       {isForecastsLoading ? (
                         <p className="text-xs text-muted-foreground">Loading...</p>
-                      ) : latestForecast ? (
+                      ) : currentValue !== null ? (
                         <>
-                          {/* Current and Forecast Values */}
-                          <div className="flex items-center justify-between">
+                          {/* Current Value */}
+                          <div className="flex items-center justify-between border-b pb-2">
                             <span className="text-xs text-muted-foreground">Current:</span>
                             <span className="font-bold text-sm text-[#4670bc]">
-                              ${latestForecast.current_value.toFixed(2)}
+                              ${currentValue.toFixed(2)}
                             </span>
                           </div>
 
-                          <div className="flex items-center justify-between">
-                            <span className="text-xs text-muted-foreground">
-                              {latestForecast.n_days_ahead}d:
-                            </span>
-                            <span className="font-bold text-sm text-[#61adde]">
-                              ${latestForecast.predicted_value.toFixed(2)}
-                            </span>
-                          </div>
+                          {/* Forecast Horizons */}
+                          <div className="space-y-2">
+                            {FORECAST_HORIZONS.map(horizon => {
+                              const forecast = productForecasts[horizon];
+                              if (!forecast) {
+                                return (
+                                  <div key={horizon} className="flex items-center justify-between">
+                                    <span className="text-xs text-muted-foreground">{horizon}d:</span>
+                                    <span className="text-xs text-muted-foreground">No data</span>
+                                  </div>
+                                );
+                              }
 
-                          {/* Trend Indicator */}
-                          {(() => {
-                            const trend = getPredictionTrend(latestForecast);
-                            return (
-                              <div className="flex items-center justify-between border-t pt-2">
-                                <span className="text-xs text-muted-foreground">Change:</span>
-                                <div className="flex items-center gap-1">
-                                  {trend.isPositive ? (
-                                    <TrendingUp className={`h-3 w-3 ${getUpColor().replace('text-', 'text-')}`} />
-                                  ) : (
-                                    <TrendingDown className={`h-3 w-3 ${getDownColor().replace('text-', 'text-')}`} />
-                                  )}
-                                  <span className={`text-xs font-semibold ${trend.isPositive ? getUpColor() : getDownColor()}`}>
-                                    {trend.isPositive ? '+' : ''}${trend.change.toFixed(1)} 
-                                    ({trend.changePercent.toFixed(1)}%)
-                                  </span>
-                                </div>
-                              </div>
-                            );
-                          })()}
+                              const trend = getPredictionTrend(currentValue, forecast.predicted_value);
+                              
+                                                             return (
+                                 <div key={horizon} className="flex items-center justify-between">
+                                   <span className="text-xs text-muted-foreground">{horizon}D-Forecast:</span>
+                                   <div className="flex items-center gap-2">
+                                     <span className={`font-semibold text-xs ${trend.isPositive ? getUpColor() : getDownColor()}`}>
+                                       ${forecast.predicted_value.toFixed(2)}
+                                     </span>
+                                     <div className="flex items-center gap-1">
+                                       {trend.isPositive ? (
+                                         <TrendingUp className={`h-3 w-3 ${getUpColor().replace('text-', 'text-')}`} />
+                                       ) : (
+                                         <TrendingDown className={`h-3 w-3 ${getDownColor().replace('text-', 'text-')}`} />
+                                       )}
+                                       <span className={`text-xs ${trend.isPositive ? getUpColor() : getDownColor()}`}>
+                                         {trend.changePercent.toFixed(1)}%
+                                       </span>
+                                     </div>
+                                   </div>
+                                 </div>
+                               );
+                            })}
+                          </div>
                         </>
                       ) : (
-                        <p className="text-xs text-muted-foreground">No data</p>
+                        <p className="text-xs text-muted-foreground">No data available</p>
                       )}
                     </CardContent>
                   </Card>

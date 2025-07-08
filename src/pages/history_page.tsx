@@ -378,7 +378,7 @@ const HistoryPage = () => {
                       <div className="bg-purple-50 p-4 rounded-lg border border-purple-200">
                         <div className="flex items-center gap-2 mb-2">
                           <Target className="h-4 w-4 text-purple-600" />
-                          <h4 className="font-semibold text-purple-900">High Accuracy</h4>
+                          <h4 className="font-semibold text-purple-900">Accuracy</h4>
                         </div>
                         <p className="text-2xl font-bold text-purple-700">
                           {performanceMetrics.exactMatches}/{performanceMetrics.totalForecasts}
@@ -405,7 +405,7 @@ const HistoryPage = () => {
                           {performanceMetrics.withinConfidenceBand}/{performanceMetrics.totalForecasts}
                         </p>
                         <p className="text-xs text-orange-600">
-                          {performanceMetrics.confidenceCoverage?.toFixed(1)}% within confidence band
+                          Forecasts within 90% confidence band
                         </p>
                       </div>
                     )}

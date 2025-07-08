@@ -141,12 +141,19 @@ const OilPage = () => {
           <CardHeader>
             <CardTitle className="text-sm font-medium text-muted-foreground flex items-center gap-2">
               <Target className="h-4 w-4" />
-              Forecast Horizon
+              Price Next Day
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-lg font-bold">{forecastStats.maxDays} days</div>
-            <div className="text-xs text-muted-foreground">{forecastStats.total} forecasts</div>
+            <div className={`text-lg font-bold ${
+              (latestForecasts.find(f => f.n_days_ahead === 1)?.predicted_value || currentValue) >= currentValue 
+                ? getUpColor() : getDownColor()
+            }`}>
+              ${(latestForecasts.find(f => f.n_days_ahead === 1)?.predicted_value || currentValue).toFixed(2)}
+            </div>
+            <div className="text-xs text-muted-foreground">
+              {((((latestForecasts.find(f => f.n_days_ahead === 1)?.predicted_value || currentValue) - currentValue) / currentValue) * 100).toFixed(2)}% change
+            </div>
           </CardContent>
         </Card>
 
@@ -182,6 +189,63 @@ const OilPage = () => {
             <div className="text-xs text-muted-foreground">
               {((((latestForecasts.find(f => f.n_days_ahead === 60)?.predicted_value || currentValue) - currentValue) / currentValue) * 100).toFixed(2)}% change
             </div>
+          </CardContent>
+        </Card>
+      </div>
+      
+      {/* Additional Forecast Charts */}
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+        {/* 1-Day Forecast */}
+        <Card>
+          <CardHeader>
+            <CardTitle>1-Day Forecast</CardTitle>
+            <CardDescription>
+              Tomorrow's price prediction
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <PredictionChart 
+              data={latestForecasts.filter(f => f.n_days_ahead <= 1)} 
+              accuracy={accuracyData}
+              currentValue={currentValue}
+              currentDate={latestDate}
+            />
+          </CardContent>
+        </Card>
+
+        {/* 5-Day Forecast */}
+        <Card>
+          <CardHeader>
+            <CardTitle>5-Day Forecast</CardTitle>
+            <CardDescription>
+              Short-term price trend
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <PredictionChart 
+              data={latestForecasts.filter(f => f.n_days_ahead <= 5)} 
+              accuracy={accuracyData}
+              currentValue={currentValue}
+              currentDate={latestDate}
+            />
+          </CardContent>
+        </Card>
+
+        {/* 30-Day Forecast */}
+        <Card>
+          <CardHeader>
+            <CardTitle>30-Day Forecast</CardTitle>
+            <CardDescription>
+              Medium-term price outlook
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <PredictionChart 
+              data={latestForecasts.filter(f => f.n_days_ahead <= 30)} 
+              accuracy={accuracyData}
+              currentValue={currentValue}
+              currentDate={latestDate}
+            />
           </CardContent>
         </Card>
       </div>
