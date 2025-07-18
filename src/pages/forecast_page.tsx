@@ -23,7 +23,7 @@ import { useColorPreferences } from "@/hooks/use-color-preferences";
 import { useOilIndices } from "@/hooks/use-oil-indices";
 import { useMemo, useState } from "react";
 import type { Forecast } from "@/hooks/types";
-import { Slider } from "@/components/ui/slider";
+
 import OilIndicesChart from "@/components/OilIndicesChart";
 
 const formatPrice = (predicted: number | null): string => {
@@ -71,20 +71,23 @@ const ForecastPage = () => {
   // Just for demonstration, remove this when we have the latest forecasts query working
 
   // Fetch oil indices data for the last 6 months
-  const sixMonthsAgo = new Date();
+  const sixMonthsAgo = new Date(current_day);
   sixMonthsAgo.setMonth(sixMonthsAgo.getMonth() - 6);
   const {
     data: oilIndicesData = [],
     isLoading: isOilIndicesLoading,
+    isError: isOilIndicesError,
+    error: oilIndicesError,
   } = useOilIndices({
     start_date: sixMonthsAgo.toISOString().split('T')[0],
+    end_date: current_day,
     limit: 500
   });
 
   const navigate = useNavigate();
   const { isFavorite, toggleFavorite } = useFavorites();
   const { getUpColor, getDownColor, getUpColorHex, getDownColorHex } = useColorPreferences();
-  const [selectedDays, setSelectedDays] = useState(20);
+
   const [sortKey, setSortKey] = useState<SortKey>('product');
   const [sortDirection, setSortDirection] = useState<SortDirection>('asc');
 
@@ -174,44 +177,41 @@ const ForecastPage = () => {
     });
   }, [latestForecasts, sortKey, sortDirection])
 
-  // Calculate Forecast Distributions for visualizations
-  const { returnDistribution, gainersLosers } = useMemo(() => {
-    const returns: number[] = [];
-    let gainers = 0;
-    let losers = 0;
-    let neutral = 0;
+  // Calculate Forecast Average Changes Time Series for visualization
+  const forecastTimeSeries = useMemo(() => {
+    if (!latestForecasts || latestForecasts.length === 0) return [];
 
-    rows.forEach(row => {
-      // Calculate return for selected days
-      const forecastData = latestForecasts.find((f: Forecast) => 
-        f.product === row.product && f.n_days_ahead === selectedDays
-      );
+    // Group forecasts by predicted_date and calculate average changes
+    const dataByDate: Record<string, { changes: number[], products: string[] }> = {};
+    
+    latestForecasts.forEach(forecast => {
+      const changePercent = ((forecast.predicted_value - forecast.current_value) / forecast.current_value) * 100;
       
-      if (forecastData?.predicted_value) {
-        const returnPct = ((forecastData.predicted_value - row.currentValue) / row.currentValue) * 100;
-        returns.push(returnPct);
-        
-        if (returnPct > 0.5) gainers++;
-        else if (returnPct < -0.5) losers++;
-        else neutral++;
+      if (!dataByDate[forecast.predicted_date]) {
+        dataByDate[forecast.predicted_date] = { changes: [], products: [] };
+      }
+      dataByDate[forecast.predicted_date].changes.push(changePercent);
+      dataByDate[forecast.predicted_date].products.push(forecast.product);
+    });
+
+    // Sort dates and create time series data
+    const sortedDates = Object.keys(dataByDate).sort();
+    const timeSeriesData: { date: string, avgChange: number, productCount: number }[] = [];
+    
+    sortedDates.forEach(date => {
+      const data = dataByDate[date];
+      if (data.changes.length > 0) {
+        const avgChange = data.changes.reduce((sum, change) => sum + change, 0) / data.changes.length;
+        timeSeriesData.push({
+          date,
+          avgChange,
+          productCount: data.products.length
+        });
       }
     });
 
-    // Create histogram bins (1% intervals from -10% to 10%)
-    const bins = Array.from({length: 21}, (_, i) => -10 + i);
-    const histogram = bins.map((bin, index) => {
-      // For each bin, count returns that fall within [bin-0.5, bin+0.5)
-      const binStart = bin - 0.5;
-      const binEnd = bin + 0.5;
-      const count = returns.filter(r => r >= binStart && r < binEnd).length;
-      return { bin, count, percentage: returns.length > 0 ? (count / returns.length) * 100 : 0 };
-    });
-
-    return {
-      returnDistribution: histogram,
-      gainersLosers: { gainers, losers, neutral, total: returns.length }
-    };
-  }, [rows, latestForecasts, selectedDays]);
+    return timeSeriesData;
+  }, [latestForecasts]);
 
   if (isLoading) return <Skeleton className="w-[100px] h-[20px] rounded-full" />;
   if (isError)   return (
@@ -232,115 +232,142 @@ const ForecastPage = () => {
       {/* Summary Statistics */}
       <Card>
         <CardHeader>
-          <CardTitle>Summary</CardTitle>
+          <div className="flex items-center gap-4">
+            <CardTitle>Summary</CardTitle>
+            <div className="px-3 py-2 bg-blue-50 border border-blue-200 rounded-lg">
+              <div className="flex items-center gap-2">
+                <span className="text-sm font-semibold text-blue-800">Latest Update:</span>
+                <span className="text-sm font-bold text-blue-900">{current_day}</span>
+              </div>
+            </div>
+          </div>
         </CardHeader>
         <CardContent>
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
             {/* Left Column - Controls and Stats */}
             <div className="space-y-4">
-              {/* Date Information */}
-              <div className="space-y-2 pb-4">
-                <div className="flex justify-between items-center">
-                  <span className="text-sm font-medium">Latest Update:</span>
-                  <span className="text-sm text-muted-foreground">{current_day}</span>
-                </div>
-              </div>
               
-              {/* Slider for day selection */}
-              <div className="space-y-2">
-                <div className="flex justify-between items-center">
-                  <span className="text-xs font-bold">Forecast Horizon:</span>
-                  <span className="text-sm font-bold">{selectedDays} day</span>
-                </div>
-                <Slider
-                  value={[selectedDays]}
-                  onValueChange={(value) => setSelectedDays(value[0])}
-                  min={1}
-                  max={60}
-                  step={1}
-                />
-                <div className="flex justify-between text-xs text-muted-foreground">
-                  <span>1D</span>
-                  <span>30D</span>
-                  <span>60D</span>
-                </div>
-              </div>
 
-              {/* Forecast Distribution Histogram */}
-              <div className="h-[200px] flex flex-col">
-                <span className="text-xs font-medium mb-3">Forecast Distribution</span>
-                <div className="flex-1 flex min-h-0">
-                  {/* Y-axis */}
-                  <div className="w-8 flex flex-col justify-between text-right pr-1">
-                    {(() => {
-                      const maxPercentage = Math.max(...returnDistribution.map(d => d.percentage));
-                      const yAxisLabels = [];
-                      const steps = 4;
-                      for (let i = steps; i >= 0; i--) {
-                        const value = (maxPercentage * i) / steps;
-                        yAxisLabels.push(
-                          <span key={i} className="text-xs text-muted-foreground" style={{ fontSize: '9px' }}>
-                            {value.toFixed(0)}%
-                          </span>
-                        );
-                      }
-                      return yAxisLabels;
-                    })()}
+
+              {/* Forecast Average Change Time Series */}
+              <div className="h-[280px] flex flex-col">
+                <span className="text-xs font-medium mb-3">Forecast Average Change (%)</span>
+                {forecastTimeSeries.length === 0 ? (
+                  <div className="flex-1 flex items-center justify-center text-muted-foreground">
+                    <span className="text-xs">No forecast data available</span>
                   </div>
-                  
-                  {/* Chart area with grid */}
-                  <div className="flex-1 relative">
-                    {/* Grid lines */}
-                    <div className="absolute inset-0">
+                ) : (
+                  <div className="flex-1 flex min-h-0">
+                    {/* Y-axis */}
+                    <div className="w-12 flex flex-col justify-between text-right pr-1">
                       {(() => {
-                        const gridLines = [];
+                        const changes = forecastTimeSeries.map(d => d.avgChange);
+                        const maxChange = Math.max(...changes);
+                        const minChange = Math.min(...changes);
+                        const range = Math.max(Math.abs(maxChange), Math.abs(minChange));
+                        const yAxisLabels = [];
                         const steps = 4;
                         for (let i = 0; i <= steps; i++) {
-                          gridLines.push(
-                            <div
-                              key={i}
-                              className="absolute w-full border-t border-gray-200"
-                              style={{ top: `${(i / steps) * 100}%` }}
-                            />
+                          const value = range - (2 * range * i) / steps;
+                          yAxisLabels.push(
+                            <span key={i} className="text-xs text-muted-foreground" style={{ fontSize: '9px' }}>
+                              {value >= 0 ? '+' : ''}{value.toFixed(1)}%
+                            </span>
                           );
                         }
-                        return gridLines;
+                        return yAxisLabels;
                       })()}
                     </div>
                     
-                    {/* Histogram bars */}
-                    <div className="absolute inset-0 flex items-end justify-center">
-                      {returnDistribution.map((item, index) => {
-                        const maxPercentage = Math.max(...returnDistribution.map(d => d.percentage));
-                        const normalizedHeight = maxPercentage > 0 ? (item.percentage / maxPercentage) * 100 : 0;
-                        const minHeight = item.count > 0 ? 2 : 0;
-                        
-                        return (
-                          <div key={index} className="flex flex-col items-center h-full justify-end flex-1">
-                            <div 
-                              className="w-full"
-                              style={{ 
-                                height: `${Math.max(normalizedHeight, minHeight)}%`,
-                                backgroundColor: item.bin >= 0 ? getUpColorHex() : getDownColorHex()
-                              }}
-                            />
-                          </div>
-                        );
-                      })}
+                    {/* Chart area with grid */}
+                    <div className="flex-1 relative">
+                      {/* Grid lines */}
+                      <div className="absolute inset-0">
+                        {(() => {
+                          const gridLines = [];
+                          const steps = 4;
+                          for (let i = 0; i <= steps; i++) {
+                            gridLines.push(
+                              <div
+                                key={i}
+                                className="absolute w-full border-t border-gray-200"
+                                style={{ top: `${(i / steps) * 100}%` }}
+                              />
+                            );
+                          }
+                          return gridLines;
+                        })()}
+                        {/* Zero line */}
+                        <div 
+                          className="absolute w-full border-t border-gray-400"
+                          style={{ top: '50%' }}
+                        />
+                      </div>
+                      
+                      {/* Time series line */}
+                      <div className="absolute inset-0">
+                        <svg className="w-full h-full">
+                          <polyline
+                            fill="none"
+                            stroke="rgb(59, 130, 246)"
+                            strokeWidth="1.5"
+                            points={forecastTimeSeries.map((item, index) => {
+                              const changes = forecastTimeSeries.map(d => d.avgChange);
+                              const maxChange = Math.max(...changes);
+                              const minChange = Math.min(...changes);
+                              const range = Math.max(Math.abs(maxChange), Math.abs(minChange));
+                              
+                              const x = (index / (forecastTimeSeries.length - 1)) * 100;
+                              const normalizedY = range > 0 ? ((range - item.avgChange) / (2 * range)) * 100 : 50;
+                              const y = Math.max(0, Math.min(100, normalizedY));
+                              
+                              return `${x}%,${y}%`;
+                            }).join(' ')}
+                          />
+                          {/* Data points */}
+                          {forecastTimeSeries.map((item, index) => {
+                            const changes = forecastTimeSeries.map(d => d.avgChange);
+                            const maxChange = Math.max(...changes);
+                            const minChange = Math.min(...changes);
+                            const range = Math.max(Math.abs(maxChange), Math.abs(minChange));
+                            
+                            const x = (index / (forecastTimeSeries.length - 1)) * 100;
+                            const normalizedY = range > 0 ? ((range - item.avgChange) / (2 * range)) * 100 : 50;
+                            const y = Math.max(0, Math.min(100, normalizedY));
+                            
+                            return (
+                              <circle
+                                key={index}
+                                cx={`${x}%`}
+                                cy={`${y}%`}
+                                r="2"
+                                fill={item.avgChange >= 0 ? getUpColorHex() : getDownColorHex()}
+                                stroke="white"
+                                strokeWidth="1"
+                              />
+                            );
+                          })}
+                        </svg>
+                      </div>
                     </div>
                   </div>
-                </div>
+                )}
                 
-                {/* X-axis labels */}
-                <div className="flex ml-8 mt-1">
-                  {returnDistribution.map((item, index) => (
-                    <div key={index} className="flex flex-col items-center flex-1">
-                      <span className="text-xs text-center" style={{ fontSize: '9px' }}>
-                        {index % 5 === 0 ? `${item.bin >= 0 ? '+' : ''}${item.bin}%` : ''}
-                      </span>
-                    </div>
-                  ))}
-                </div>
+                {/* X-axis labels - Show dates */}
+                {forecastTimeSeries.length > 0 && (
+                  <div className="flex ml-12 mt-1">
+                    {forecastTimeSeries.map((item, index) => (
+                      <div key={index} className="flex flex-col items-center flex-1">
+                        <span className="text-xs text-center" style={{ fontSize: '8px' }}>
+                          {index % Math.max(1, Math.floor(forecastTimeSeries.length / 5)) === 0 ? 
+                            new Date(item.date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) : 
+                            ''
+                          }
+                        </span>
+                      </div>
+                    ))}
+                  </div>
+                )}
               </div>
             </div>
 
@@ -350,15 +377,31 @@ const ForecastPage = () => {
               <div className="flex flex-col">
                 <span className="text-xs font-medium mb-3">Oil Indices</span>
                 {isOilIndicesLoading ? (
-                  <div className="h-[320px] flex items-center justify-center text-muted-foreground">
+                  <div className="h-[280px] flex items-center justify-center text-muted-foreground">
                     <span className="text-xs">Loading...</span>
+                  </div>
+                ) : isOilIndicesError ? (
+                  <div className="h-[280px] flex items-center justify-center text-muted-foreground">
+                    <div className="text-center">
+                      <span className="text-xs">Error loading oil indices data</span>
+                      <br />
+                      <span className="text-xs text-red-500">{oilIndicesError?.message}</span>
+                    </div>
+                  </div>
+                ) : oilIndicesData.length === 0 ? (
+                  <div className="h-[280px] flex items-center justify-center text-muted-foreground">
+                    <div className="text-center">
+                      <span className="text-xs">No oil indices data available</span>
+                      <br />
+                      <span className="text-xs">Date range: {sixMonthsAgo.toISOString().split('T')[0]} to {current_day}</span>
+                    </div>
                   </div>
                 ) : (
                   <div>
                     <OilIndicesChart 
                       data={oilIndicesData}
                       title=""
-                      height={320}
+                      height={280}
                     />
                   </div>
                 )}
@@ -383,20 +426,20 @@ const ForecastPage = () => {
               <TableRow>
                   <SortableHeader label="SYMBOL" sortKey="product" />
                   <SortableHeader label="PRICE" sortKey="currentValue" />
-                  <SortableHeader label="1-D forecast" sortKey="price1" />
-                  <SortableHeader label="1-D %Chg" sortKey="change1" />
-                  <SortableHeader label="5-D forecast" sortKey="price5" />
-                  <SortableHeader label="5-D %Chg" sortKey="change5" /> 
-                  <SortableHeader label="10-D forecast" sortKey="price10" />
-                  <SortableHeader label="10-D %Chg" sortKey="change10" />
-                  <SortableHeader label="15-D forecast" sortKey="price15" />
-                  <SortableHeader label="15-D %Chg" sortKey="change15" />
-                  <SortableHeader label="20-D forecast" sortKey="price20" />
-                  <SortableHeader label="20-D %Chg" sortKey="change20" />
-                  <SortableHeader label="30-D forecast" sortKey="price30" />
-                  <SortableHeader label="30-D %Chg" sortKey="change30" />
-                  <SortableHeader label="60-D forecast" sortKey="price60" />
-                  <SortableHeader label="60-D %Chg" sortKey="change60" />
+                  <SortableHeader label="1-Day forecast" sortKey="price1" />
+                  <SortableHeader label="1-Day %Chg" sortKey="change1" />
+                  <SortableHeader label="5-Day forecast" sortKey="price5" />
+                  <SortableHeader label="5-Day %Chg" sortKey="change5" /> 
+                  <SortableHeader label="10-Day forecast" sortKey="price10" />
+                  <SortableHeader label="10-Day %Chg" sortKey="change10" />
+                  <SortableHeader label="15-Day forecast" sortKey="price15" />
+                  <SortableHeader label="15-Day %Chg" sortKey="change15" />
+                  <SortableHeader label="20-Day forecast" sortKey="price20" />
+                  <SortableHeader label="20-Day %Chg" sortKey="change20" />
+                  <SortableHeader label="30-Day forecast" sortKey="price30" />
+                  <SortableHeader label="30-Day %Chg" sortKey="change30" />
+                  <SortableHeader label="60-Day forecast" sortKey="price60" />
+                  <SortableHeader label="60-Day %Chg" sortKey="change60" />
               </TableRow>
             </TableHeader>
             <TableBody>

@@ -1,515 +1,444 @@
-import React, { useEffect, useState } from 'react';
-import { useRoute } from '../hooks/use-route';
-import { useVessel } from '../hooks/use-vessel';
-import { usePort } from '../hooks/use-port';
-import RouteMap from '../components/route_map';
-import { 
-  Select, 
-  SelectContent, 
-  SelectItem, 
-  SelectTrigger, 
-  SelectValue 
-} from '@/components/ui/select';
-import { Calendar } from '@/components/ui/calendar';
-import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
-import { CalendarIcon } from 'lucide-react';
-import type { RouteResponse, RouteCreate, VesselResponse, PortResponse } from '../hooks/types';
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card"
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogHeader,
-  DialogTitle,
-  DialogFooter,
-} from "@/components/ui/dialog"
-import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
-import { PlusCircle, RefreshCw } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { Badge } from '@/components/ui/badge';
+import { Search, Ship, MapPin, Clock, Navigation, PlusCircle, Edit } from 'lucide-react';
+import VesselFinderMap from '../components/VesselFinderMap';
 
-const RoutePage: React.FC = () => {
-  // State management
-  const [routes, setRoutes] = useState<RouteResponse[]>([]);
-  const [vessels, setVessels] = useState<VesselResponse[]>([]);
-  const [ports, setPorts] = useState<PortResponse[]>([]);
-  const [selectedRoute, setSelectedRoute] = useState<RouteResponse | null>(null);
-  const [selectedRouteForMap, setSelectedRouteForMap] = useState<number | undefined>(undefined);
-  const [isRouteDialogOpen, setIsRouteDialogOpen] = useState(false);
-  const [routeFormData, setRouteFormData] = useState<RouteCreate>({
-    vessel_id: 0,
-    departure_port_id: 0,
-    arrival_port_id: 0,
-    scheduled_departure: '',
-    estimated_arrival: '',
+interface VesselInfo {
+  imo: string;
+  name: string;
+  type: string;
+  flag: string;
+  built: string;
+  status: string;
+}
+
+const VesselTrackingPage: React.FC = () => {
+  const [selectedIMO, setSelectedIMO] = useState<string>('');
+  const [savedVessels, setSavedVessels] = useState<VesselInfo[]>([]);
+  const [showAddForm, setShowAddForm] = useState<boolean>(false);
+  const [editingVessel, setEditingVessel] = useState<VesselInfo | null>(null);
+  const [vesselForm, setVesselForm] = useState<VesselInfo>({
+    imo: '',
+    name: '',
+    type: '',
+    flag: '',
+    built: '',
+    status: 'Active'
+  });
+  const [mapCenter, setMapCenter] = useState({
+    latitude: 25.0,
+    longitude: 55.0,
+    zoom: 3
   });
 
-  // Hooks
-  const {
-    loading: routeLoading,
-    error: routeError,
-    fetchRoutes,
-    addRoute,
-    modifyRoute,
-    removeRoute,
-  } = useRoute();
 
-  const {
-    loading: vesselLoading,
-    error: vesselError,
-    fetchVessels,
-  } = useVessel();
 
-  const {
-    loading: portLoading,
-    error: portError,
-    fetchPorts,
-  } = usePort();
+  // Maritime regions for quick navigation
+  const regions = [
+    { name: 'Singapore Strait', lat: 1.29, lon: 103.85, zoom: 10 },
+    { name: 'Suez Canal', lat: 30.5, lon: 32.35, zoom: 8 },
+    { name: 'English Channel', lat: 50.9, lon: 1.4, zoom: 7 },
+    { name: 'Panama Canal', lat: 9.08, lon: -79.68, zoom: 9 },
+    { name: 'Gibraltar Strait', lat: 36.0, lon: -5.4, zoom: 8 },
+    { name: 'Global View', lat: 25.0, lon: 55.0, zoom: 3 },
+  ];
 
-  // Fetch initial data
-  useEffect(() => {
-    loadRoutes();
-    loadVessels();
-    loadPorts();
-  }, []);
 
-  const loadRoutes = async () => {
-    const routeData = await fetchRoutes();
-    setRoutes(routeData);
+
+
+
+  const handleAddVessel = () => {
+    setShowAddForm(true);
+    setEditingVessel(null);
+    setVesselForm({
+      imo: '',
+      name: '',
+      type: '',
+      flag: '',
+      built: '',
+      status: 'Active'
+    });
   };
 
-  const loadVessels = async () => {
-    const vesselData = await fetchVessels();
-    setVessels(vesselData);
+  const handleEditVessel = (vessel: VesselInfo) => {
+    setShowAddForm(true);
+    setEditingVessel(vessel);
+    setVesselForm(vessel);
   };
 
-  const loadPorts = async () => {
-    const portData = await fetchPorts();
-    setPorts(portData);
-  };
-
-  // Form handlers
-  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
-    const { name, value } = e.target;
-    setRouteFormData(prev => ({
-      ...prev,
-      [name]: name.includes('_id') ? parseInt(value) : value,
-    }));
-  };
-
-  const handleSelectChange = (name: string, value: string) => {
-    setRouteFormData(prev => ({
-      ...prev,
-      [name]: name.includes('_id') ? parseInt(value) : value,
-    }));
-  };
-
-  const handleDateChange = (name: string, date: Date | undefined) => {
-    if (date) {
-      // Preserve existing time if any, otherwise set to current time
-      const existingDateTime = routeFormData[name as keyof RouteCreate] as string;
-      let timeString = '09:00'; // default time
-      
-      if (existingDateTime) {
-        const existingDate = new Date(existingDateTime);
-        timeString = existingDate.toTimeString().slice(0, 5);
+    const handleFormSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (vesselForm.imo.trim()) {
+      if (editingVessel) {
+        // Update existing vessel
+        setSavedVessels(prev => 
+          prev.map(v => v.imo === editingVessel.imo ? vesselForm : v)
+        );
+      } else {
+        // Add new vessel with IMO only, generate default info
+        if (!savedVessels.some(v => v.imo === vesselForm.imo)) {
+          const newVessel: VesselInfo = {
+            imo: vesselForm.imo.trim(),
+            name: vesselForm.name.trim() || `Vessel ${vesselForm.imo.trim()}`,
+            type: vesselForm.type.trim() || 'Cargo Ship',
+            flag: vesselForm.flag.trim() || 'Unknown',
+            built: vesselForm.built.trim() || '2020',
+            status: vesselForm.status || 'Active'
+          };
+          setSavedVessels(prev => [...prev, newVessel]);
+        }
       }
       
-      // Combine date with time
-      const formatted = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}T${timeString}`;
-      
-      setRouteFormData(prev => ({
-        ...prev,
-        [name]: formatted,
-      }));
+      setShowAddForm(false);
+      setEditingVessel(null);
+      setVesselForm({
+        imo: '',
+        name: '',
+        type: '',
+        flag: '',
+        built: '',
+        status: 'Active'
+      });
     }
   };
 
-  const handleTimeChange = (name: string, time: string) => {
-    const existingDateTime = routeFormData[name as keyof RouteCreate] as string;
-    if (existingDateTime) {
-      const existingDate = new Date(existingDateTime);
-      const formatted = `${existingDate.getFullYear()}-${String(existingDate.getMonth() + 1).padStart(2, '0')}-${String(existingDate.getDate()).padStart(2, '0')}T${time}`;
-      
-      setRouteFormData(prev => ({
-        ...prev,
-        [name]: formatted,
-      }));
-    }
-  };
-
-  const formatDateTimeForDisplay = (dateString: string): string => {
-    if (!dateString) return '';
-    const date = new Date(dateString);
-    return `${date.toLocaleDateString()} ${date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}`;
-  };
-
-  const getTimeFromDateTime = (dateString: string): string => {
-    if (!dateString) return '09:00';
-    return new Date(dateString).toTimeString().slice(0, 5);
-  };
-
-  const handleRouteSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (selectedRoute) {
-      await modifyRoute(selectedRoute.id, routeFormData);
-    } else {
-      await addRoute(routeFormData);
-    }
-    setIsRouteDialogOpen(false);
-    loadRoutes();
-  };
-
-  const handleEdit = (route: RouteResponse) => {
-    setSelectedRoute(route);
-    setRouteFormData({
-      vessel_id: route.vessel_id,
-      departure_port_id: route.departure_port_id,
-      arrival_port_id: route.arrival_port_id,
-      scheduled_departure: route.scheduled_departure,
-      estimated_arrival: route.estimated_arrival,
-      actual_departure: route.actual_departure || undefined,
-      actual_arrival: route.actual_arrival || undefined,
-      current_latitude: route.current_latitude || undefined,
-      current_longitude: route.current_longitude || undefined,
+  const handleCancelForm = () => {
+    setShowAddForm(false);
+    setEditingVessel(null);
+    setVesselForm({
+      imo: '',
+      name: '',
+      type: '',
+      flag: '',
+      built: '',
+      status: 'Active'
     });
-    setIsRouteDialogOpen(true);
   };
 
-  const handleDelete = async (routeId: number) => {
-    if (window.confirm('Are you sure you want to delete this route?')) {
-      await removeRoute(routeId);
-      loadRoutes();
+  const handleVesselSelect = (vessel: VesselInfo) => {
+    setSelectedIMO(vessel.imo);
+  };
+
+  const handleRemoveVessel = (imoToRemove: string) => {
+    setSavedVessels(prev => prev.filter(v => v.imo !== imoToRemove));
+    if (selectedIMO === imoToRemove) {
+      setSelectedIMO('');
     }
   };
 
-  const handleCreateNewRoute = () => {
-    setSelectedRoute(null);
-    setRouteFormData({
-      vessel_id: 0,
-      departure_port_id: 0,
-      arrival_port_id: 0,
-      scheduled_departure: '',
-      estimated_arrival: '',
+  const handleRegionSelect = (region: typeof regions[0]) => {
+    setMapCenter({
+      latitude: region.lat,
+      longitude: region.lon,
+      zoom: region.zoom
     });
-    setIsRouteDialogOpen(true);
   };
 
-  if (routeLoading || vesselLoading || portLoading) {
-    return <div>Loading...</div>;
-  }
+  const clearSelection = () => {
+    setSelectedIMO('');
+  };
 
-  if (routeError || vesselError || portError) {
-    return <div>Error: {(routeError || vesselError || portError)?.message}</div>;
-  }
+
 
   return (
     <div className="space-y-6">
-      {/* Header */}
+      {/* Vessels Card */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2 text-[#61adde]">
+            <Ship className="h-5 w-5" />
+            My Vessels
+          </CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          {/* Add Vessel */}
       <div className="flex justify-between items-center">
         <div>
-          <h1 className="text-3xl font-bold bg-gradient-to-r from-[#61adde] to-[#4670bc] bg-clip-text text-transparent">Route Management</h1>
+              <h3 className="text-lg font-semibold text-[#4670bc]">Your Vessels</h3>
+              <p className="text-sm text-gray-600">Add and manage your vessel tracking list</p>
         </div>
+            <div className="flex gap-2">
         <Button
-          onClick={() => {
-            loadRoutes();
-            loadVessels();
-            loadPorts();
-          }}
+                onClick={handleAddVessel}
           className="bg-gradient-to-r from-[#61adde] to-[#4670bc]"
         >
-          <RefreshCw className="h-4 w-4 mr-2" />
-          Refresh Data
+                <PlusCircle className="h-4 w-4 mr-2" />
+                Add Vessel
+              </Button>
+              <Button 
+                onClick={clearSelection}
+                variant="outline"
+                disabled={!selectedIMO}
+              >
+                Clear Selection
         </Button>
+            </div>
       </div>
 
-      <div className="space-y-6">
-        {/* Routes Section */}
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between">
-            <div>
-              <CardTitle className="text-[#61adde]">Routes</CardTitle>
-              <CardDescription>Manage and monitor your shipping routes</CardDescription>
+                    {/* Add/Edit Vessel Form */}
+          {showAddForm && (
+            <div className="p-4 border rounded-lg bg-gray-50">
+              <h3 className="font-semibold text-[#4670bc] mb-4">
+                {editingVessel ? 'Edit Vessel Information' : 'Add New Vessel'}
+              </h3>
+              <form onSubmit={handleFormSubmit} className="space-y-4">
+                {editingVessel ? (
+                  // Edit mode - show all fields
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                      <Label htmlFor="vessel-imo">IMO Number</Label>
+                      <Input
+                        id="vessel-imo"
+                        value={vesselForm.imo}
+                        onChange={(e) => setVesselForm(prev => ({ ...prev, imo: e.target.value }))}
+                        placeholder="9506291"
+                        disabled
+                      />
+                    </div>
+                    <div>
+                      <Label htmlFor="vessel-name">Vessel Name</Label>
+                      <Input
+                        id="vessel-name"
+                        value={vesselForm.name}
+                        onChange={(e) => setVesselForm(prev => ({ ...prev, name: e.target.value }))}
+                        placeholder="Ever Given"
+                      />
+                    </div>
+                    <div>
+                      <Label htmlFor="vessel-type">Type</Label>
+                      <Input
+                        id="vessel-type"
+                        value={vesselForm.type}
+                        onChange={(e) => setVesselForm(prev => ({ ...prev, type: e.target.value }))}
+                        placeholder="Container Ship"
+                      />
+                    </div>
+                    <div>
+                      <Label htmlFor="vessel-flag">Flag</Label>
+                      <Input
+                        id="vessel-flag"
+                        value={vesselForm.flag}
+                        onChange={(e) => setVesselForm(prev => ({ ...prev, flag: e.target.value }))}
+                        placeholder="Panama"
+                      />
+                    </div>
+                    <div>
+                      <Label htmlFor="vessel-built">Built Year</Label>
+                      <Input
+                        id="vessel-built"
+                        value={vesselForm.built}
+                        onChange={(e) => setVesselForm(prev => ({ ...prev, built: e.target.value }))}
+                        placeholder="2018"
+                      />
+                    </div>
+                    <div>
+                      <Label htmlFor="vessel-status">Status</Label>
+                      <Input
+                        id="vessel-status"
+                        value={vesselForm.status}
+                        onChange={(e) => setVesselForm(prev => ({ ...prev, status: e.target.value }))}
+                        placeholder="Active"
+                      />
+                    </div>
+                  </div>
+                ) : (
+                  // Add mode - only IMO field
+                  <div className="max-w-md">
+                    <div>
+                      <Label htmlFor="vessel-imo">IMO Number</Label>
+                      <Input
+                        id="vessel-imo"
+                        value={vesselForm.imo}
+                        onChange={(e) => setVesselForm(prev => ({ ...prev, imo: e.target.value }))}
+                        placeholder="Enter IMO number (e.g., 9506291)"
+                        required
+                        className="mt-1"
+                      />
+                      <p className="text-xs text-gray-500 mt-1">
+                        Additional vessel information will be displayed after adding
+                      </p>
+                    </div>
+                  </div>
+                )}
+                <div className="flex gap-2">
+                  <Button 
+                    type="submit"
+                    className="bg-gradient-to-r from-[#61adde] to-[#4670bc]"
+                    disabled={!vesselForm.imo.trim()}
+                  >
+                    {editingVessel ? 'Update Vessel' : 'Add Vessel'}
+                  </Button>
+                  <Button 
+                    type="button"
+                    variant="outline"
+                    onClick={handleCancelForm}
+                  >
+                    Cancel
+                  </Button>
+                </div>
+              </form>
             </div>
-            <Button
-              onClick={handleCreateNewRoute}
-              variant="ghost"
-              size="sm"
-            >
-              <PlusCircle className="h-4 w-4" />
-            </Button>
-          </CardHeader>
-          <CardContent>
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-              {routes.map(route => (
-                <Card 
-                  key={route.id} 
-                  className={`cursor-pointer transition-all hover:shadow-md ${
-                    selectedRouteForMap === route.id ? 'ring-2 ring-[#61adde]' : ''
-                  }`}
-                  onClick={() => setSelectedRouteForMap(selectedRouteForMap === route.id ? undefined : route.id)}
-                >
-                  <CardHeader className="pb-2">
-                    <div className="space-y-1">
-                      <div className="flex items-center justify-between">
-                        <CardTitle className="text-sm font-semibold text-[#4670bc] truncate">
-                          {vessels.find(v => v.id === route.vessel_id)?.vessel_name || `Vessel ${route.vessel_id}`}
-                        </CardTitle>
-                        <Badge 
-                          variant={
-                            route.current_latitude && route.current_longitude
-                              ? 'default'
-                              : new Date(route.scheduled_departure) > new Date()
-                              ? 'secondary'
-                              : 'outline'
-                          }
-                          className="text-xs"
-                        >
-                          {route.current_latitude && route.current_longitude
-                            ? 'En Route'
-                            : new Date(route.scheduled_departure) > new Date()
-                            ? 'Scheduled'
-                            : 'Departed'
-                          }
-                        </Badge>
+          )}
+
+          {/* Selected Vessel Info */}
+          {selectedIMO && (
+            <div className="mt-4 p-4 bg-blue-50 rounded-lg">
+              <div className="flex items-center gap-2 mb-2">
+                <Ship className="h-5 w-5 text-[#61adde]" />
+                <span className="font-semibold text-[#4670bc]">
+                  Tracking Vessel: IMO {selectedIMO}
+                </span>
+              </div>
+              <div className="text-sm text-gray-600">
+                Live position and track data will be displayed on the map below
+              </div>
+            </div>
+          )}
+
+          {/* Saved Vessels */}
+          {savedVessels.length > 0 ? (
+            <div className="mt-4">
+              <Label className="text-sm font-medium mb-2 block">Your Vessels ({savedVessels.length}):</Label>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                {savedVessels.map((vessel) => (
+                                    <div
+                    key={vessel.imo}
+                    className={`p-3 border rounded-lg cursor-pointer transition-all hover:shadow-md ${
+                      selectedIMO === vessel.imo ? 'border-[#61adde] bg-blue-50 shadow-md' : 'border-gray-200 hover:border-gray-300'
+                    }`}
+                    onClick={() => handleVesselSelect(vessel)}
+                  >
+                                        <div className="flex justify-between items-start">
+                      <div className="flex-1">
+                        <div className="flex items-center gap-2">
+                          <div className="font-semibold text-[#4670bc] text-sm">{vessel.name}</div>
+                          {selectedIMO === vessel.imo && (
+                            <Badge className="bg-[#61adde] text-white text-xs px-2 py-0.5">
+                              Tracking
+                            </Badge>
+                          )}
+                        </div>
+                        <div className="text-xs text-gray-600 mb-1">IMO: {vessel.imo}</div>
+                        <div className="space-y-0.5">
+                          <div className="text-xs text-gray-500">
+                            <span className="font-medium">Type:</span> {vessel.type}
+                          </div>
+                          <div className="text-xs text-gray-500">
+                            <span className="font-medium">Flag:</span> {vessel.flag}
+                          </div>
+                          <div className="text-xs text-gray-500">
+                            <span className="font-medium">Built:</span> {vessel.built} | <span className="font-medium">Status:</span> {vessel.status}
+                          </div>
+                        </div>
                       </div>
-                      <div className="text-xs text-muted-foreground">
-                        {ports.find(p => p.id === route.departure_port_id)?.port_name || `Port ${route.departure_port_id}`} → {ports.find(p => p.id === route.arrival_port_id)?.port_name || `Port ${route.arrival_port_id}`}
-                      </div>
-                    </div>
-                  </CardHeader>
-                  <CardContent className="pt-0 space-y-2">
-                    <div className="text-xs text-muted-foreground">
-                      {new Date(route.scheduled_departure).toLocaleDateString()} → {new Date(route.estimated_arrival).toLocaleDateString()}
-                    </div>
                     <div className="flex gap-1">
                       <Button
                         onClick={(e) => {
                           e.stopPropagation();
-                          handleEdit(route);
+                            handleEditVessel(vessel);
                         }}
+                          variant="outline"
                         size="sm"
-                        className="flex-1 bg-[#61adde] hover:bg-[#4670bc] text-xs py-1"
+                          className="text-xs py-1 px-2"
                       >
+                          <Edit className="h-3 w-3 mr-1" />
                         Edit
                       </Button>
                       <Button
                         onClick={(e) => {
                           e.stopPropagation();
-                          handleDelete(route.id);
+                            handleRemoveVessel(vessel.imo);
                         }}
+                          variant="outline"
                         size="sm"
-                        variant="destructive"
-                        className="flex-1 text-xs py-1"
+                          className="text-xs py-1 px-2"
                       >
-                        Delete
+                          Remove
                       </Button>
+                      </div>
                     </div>
-                  </CardContent>
-                </Card>
-              ))}
-              
-              {/* Add New Route Card */}
-              <Card 
-                className="border-dashed cursor-pointer hover:bg-muted/50 transition-colors"
-                onClick={handleCreateNewRoute}
-              >
-                <CardContent className="flex items-center justify-center h-[100px]">
-                  <div className="text-center">
-                    <PlusCircle className="h-5 w-5 mx-auto mb-1 text-[#61adde]" />
-                    <p className="text-muted-foreground text-xs">Add New Route</p>
                   </div>
-                </CardContent>
-              </Card>
+                ))}
+              </div>
             </div>
+          ) : (
+            <div className="mt-4 text-center py-8">
+              <Ship className="h-12 w-12 text-gray-300 mx-auto mb-3" />
+              <p className="text-gray-500 text-sm">No vessels added yet</p>
+              <p className="text-gray-400 text-xs">Click "Add Vessel" to start tracking your first vessel</p>
+            </div>
+          )}
           </CardContent>
         </Card>
 
-        {/* Route Map Section */}
+
+
+
+
+      {/* Map */}
         <Card>
           <CardHeader>
-            <CardTitle className="text-[#61adde]">Route Map</CardTitle>
-            <CardDescription>Interactive map showing all routes and vessel positions</CardDescription>
+          <CardTitle className="flex items-center gap-2 text-[#61adde]">
+            <MapPin className="h-5 w-5" />
+            Live Vessel Map
+            {selectedIMO && (
+              <Badge className="ml-2 bg-[#61adde]">
+                Tracking IMO: {selectedIMO}
+              </Badge>
+            )}
+          </CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="w-full h-[500px]">
-              <RouteMap
-                routes={routes}
-                vessels={vessels}
-                ports={ports}
-                selectedRouteId={selectedRouteForMap}
-              />
+          {/* Quick Navigation */}
+          <div className="mb-4 p-4 bg-gray-50 rounded-lg">
+            <div className="flex items-center gap-2 mb-3">
+              <MapPin className="h-4 w-4 text-gray-500" />
+              <Label className="font-medium">Quick Navigation:</Label>
             </div>
-          </CardContent>
-        </Card>
-      </div>
-
-      {/* Route Dialog */}
-      <Dialog open={isRouteDialogOpen} onOpenChange={setIsRouteDialogOpen}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle className="text-[#61adde]">{selectedRoute ? 'Edit Route' : 'Create New Route'}</DialogTitle>
-            <DialogDescription>
-              {selectedRoute ? 'Modify the existing route details' : 'Enter the details for a new route'}
-            </DialogDescription>
-          </DialogHeader>
-          <form id="routeForm" onSubmit={handleRouteSubmit} className="space-y-4">
-            <div>
-              <label className="block mb-1 text-sm font-medium">Vessel</label>
-              <Select
-                value={routeFormData.vessel_id ? String(routeFormData.vessel_id) : ""}
-                onValueChange={(value) => handleSelectChange('vessel_id', value)}
-              >
-                <SelectTrigger className="w-full">
-                  <SelectValue placeholder="Select Vessel" />
-                </SelectTrigger>
-                <SelectContent>
-                  {vessels.map(vessel => (
-                    <SelectItem key={vessel.id} value={String(vessel.id)}>
-                      {vessel.vessel_name}
-                    </SelectItem>
+            <div className="flex flex-wrap gap-2">
+              {regions.map((region) => (
+                <Button
+                  key={region.name}
+                  variant="outline"
+                  size="sm"
+                  onClick={() => handleRegionSelect(region)}
+                  className="text-xs"
+                >
+                  {region.name}
+                </Button>
                   ))}
-                </SelectContent>
-              </Select>
+            </div>
             </div>
 
-            <div>
-              <label className="block mb-1 text-sm font-medium">Departure Port</label>
-              <Select
-                value={routeFormData.departure_port_id ? String(routeFormData.departure_port_id) : ""}
-                onValueChange={(value) => handleSelectChange('departure_port_id', value)}
-              >
-                <SelectTrigger className="w-full">
-                  <SelectValue placeholder="Select Departure Port" />
-                </SelectTrigger>
-                <SelectContent>
-                  {ports.map(port => (
-                    <SelectItem key={port.id} value={String(port.id)}>
-                      {port.port_name} ({port.country})
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+          <VesselFinderMap 
+            width="100%" 
+            height={600}
+            latitude={mapCenter.latitude}
+            longitude={mapCenter.longitude}
+            zoom={mapCenter.zoom}
+            names={false}
+            showTrack={true}
+            imo={selectedIMO || undefined}
+          />
+          <div className="mt-4 text-sm text-gray-600">
+            <div className="flex items-center gap-4">
+              <div className="flex items-center gap-2">
+                <Clock className="h-4 w-4" />
+                <span>Real-time AIS data</span>
             </div>
-
             <div>
-              <label className="block mb-1 text-sm font-medium">Arrival Port</label>
-              <Select
-                value={routeFormData.arrival_port_id ? String(routeFormData.arrival_port_id) : ""}
-                onValueChange={(value) => handleSelectChange('arrival_port_id', value)}
-              >
-                <SelectTrigger className="w-full">
-                  <SelectValue placeholder="Select Arrival Port" />
-                </SelectTrigger>
-                <SelectContent>
-                  {ports.map(port => (
-                    <SelectItem key={port.id} value={String(port.id)}>
-                      {port.port_name} ({port.country})
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-
-            <div>
-              <label className="block mb-1 text-sm font-medium">Scheduled Departure</label>
-              <Popover>
-                <PopoverTrigger asChild>
-                  <Button
-                    variant="outline"
-                    className="w-full justify-start text-left font-normal"
-                  >
-                    <CalendarIcon className="mr-2 h-4 w-4" />
-                    {routeFormData.scheduled_departure ? 
-                      formatDateTimeForDisplay(routeFormData.scheduled_departure) : 
-                      "Select departure date & time"
-                    }
-                  </Button>
-                </PopoverTrigger>
-                <PopoverContent className="w-auto p-0" align="start">
-                  <div className="p-3">
-                    <Calendar
-                      mode="single"
-                      selected={routeFormData.scheduled_departure ? new Date(routeFormData.scheduled_departure) : undefined}
-                      onSelect={(date) => handleDateChange('scheduled_departure', date)}
-                      initialFocus
-                    />
-                    <div className="mt-3 pt-3 border-t">
-                      <label className="block text-sm font-medium mb-1">Time</label>
-                      <input
-                        type="time"
-                        value={getTimeFromDateTime(routeFormData.scheduled_departure)}
-                        onChange={(e) => handleTimeChange('scheduled_departure', e.target.value)}
-                        className="w-full p-2 border rounded focus:ring-2 focus:ring-[#61adde] focus:border-transparent"
-                      />
-                    </div>
+                Current view: {mapCenter.latitude.toFixed(2)}, {mapCenter.longitude.toFixed(2)} (Zoom: {mapCenter.zoom})
                   </div>
-                </PopoverContent>
-              </Popover>
             </div>
-
-            <div>
-              <label className="block mb-1 text-sm font-medium">Estimated Arrival</label>
-              <Popover>
-                <PopoverTrigger asChild>
-                  <Button
-                    variant="outline"
-                    className="w-full justify-start text-left font-normal"
-                  >
-                    <CalendarIcon className="mr-2 h-4 w-4" />
-                    {routeFormData.estimated_arrival ? 
-                      formatDateTimeForDisplay(routeFormData.estimated_arrival) : 
-                      "Select arrival date & time"
-                    }
-                  </Button>
-                </PopoverTrigger>
-                <PopoverContent className="w-auto p-0" align="start">
-                  <div className="p-3">
-                    <Calendar
-                      mode="single"
-                      selected={routeFormData.estimated_arrival ? new Date(routeFormData.estimated_arrival) : undefined}
-                      onSelect={(date) => handleDateChange('estimated_arrival', date)}
-                      initialFocus
-                    />
-                    <div className="mt-3 pt-3 border-t">
-                      <label className="block text-sm font-medium mb-1">Time</label>
-                      <input
-                        type="time"
-                        value={getTimeFromDateTime(routeFormData.estimated_arrival)}
-                        onChange={(e) => handleTimeChange('estimated_arrival', e.target.value)}
-                        className="w-full p-2 border rounded focus:ring-2 focus:ring-[#61adde] focus:border-transparent"
-                      />
                     </div>
-                  </div>
-                </PopoverContent>
-              </Popover>
-            </div>
-          </form>
-          <DialogFooter>
-            <Button
-              type="button"
-              onClick={() => setIsRouteDialogOpen(false)}
-              variant="outline"
-            >
-              Cancel
-            </Button>
-            <Button
-              type="submit"
-              form="routeForm"
-              className="bg-gradient-to-r from-[#61adde] to-[#4670bc]"
-            >
-              {selectedRoute ? 'Update Route' : 'Create Route'}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+        </CardContent>
+      </Card>
     </div>
   );
 };
 
-export default RoutePage;
+export default VesselTrackingPage;

@@ -110,11 +110,11 @@ const HistoryChart: React.FC<HistoryChartProps> = ({
         <div className="bg-white p-3 border rounded-lg shadow-lg">
           <p className="font-medium">{new Date(label).toLocaleDateString()}</p>
           <div className="space-y-1">
-            <p className="text-blue-600">
+            <p className="text-green-600">
               <span className="font-medium">Predicted: </span>
               ${data.predicted.toFixed(2)}
             </p>
-            <p className="text-green-600">
+            <p className="text-amber-600">
               <span className="font-medium">Actual: </span>
               ${data.actual.toFixed(2)}
             </p>
@@ -199,7 +199,7 @@ const HistoryChart: React.FC<HistoryChartProps> = ({
             name="Predicted" 
             type="monotone" 
             strokeWidth={2} 
-            stroke="#f59e0b" 
+            stroke="#10b981" 
             strokeDasharray="5 5"
             dot={false}
           />
@@ -210,7 +210,7 @@ const HistoryChart: React.FC<HistoryChartProps> = ({
             name="Actual" 
             type="monotone" 
             strokeWidth={3} 
-            stroke="#10b981" 
+            stroke="#f59e0b" 
             dot={false}
             activeDot={false}
           />

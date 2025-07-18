@@ -1,4 +1,4 @@
-import { History, Home, Lightbulb, Inbox, TrendingUpDown, Settings, Route, Ship } from "lucide-react"
+import { History, Home, Lightbulb, Inbox, TrendingUpDown, Settings, Route, Droplet } from "lucide-react"
 import Header from '@/components/header'
 import {
   Sidebar,
@@ -41,9 +41,9 @@ const data_items = [
 
 const optimization_items = [
   {
-    title: "Vessels",
-    url: "/vessels",
-    icon: Ship,
+    title: "Bunker",
+    url: "/bunker",
+    icon: Droplet,
   },
   {
     title: "Routes",

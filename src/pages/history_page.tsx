@@ -272,13 +272,13 @@ const HistoryPage = () => {
                   )}
                 />
 
-                {/* forecast days slider */}
+                {/* forecast horizon slider */}
                 <FormField
                   control={form.control}
                   name="forecastDays"
                   render={({ field }) => (
                     <FormItem className="flex-1 min-w-[250px]">
-                      <FormLabel>Forecast Days ({field.value} days ahead)</FormLabel>
+                      <FormLabel>Forecast Horizon ({field.value}-Day)</FormLabel>
                       <FormControl>
                         <div className="space-y-2">
                           <Slider
@@ -290,8 +290,8 @@ const HistoryPage = () => {
                             className="w-full"
                           />
                           <div className="flex justify-between text-xs text-gray-500">
-                            <span>1 day</span>
-                            <span>60 days</span>
+                            <span>1-Day</span>
+                            <span>60-Day</span>
                           </div>
                         </div>
                       </FormControl>
@@ -345,12 +345,12 @@ const HistoryPage = () => {
                   </div>
                 ) : (
                   <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-                    {/* MAE */}
+                    {/* Average Error */}
                     {accuracyData.length > 0 && (
                       <div className="bg-blue-50 p-4 rounded-lg border border-blue-200">
                         <div className="flex items-center gap-2 mb-2">
                           <Target className="h-4 w-4 text-blue-600" />
-                          <h4 className="font-semibold text-blue-900">MAE</h4>
+                          <h4 className="font-semibold text-blue-900">Average Error</h4>
                         </div>
                         <p className="text-2xl font-bold text-blue-700">
                           ${accuracyData[0]?.mae?.toFixed(2) || 'N/A'}
@@ -359,68 +359,91 @@ const HistoryPage = () => {
                       </div>
                     )}
 
-                    {/* MAPE */}
+                    {/* Accuracy*/}
                     {accuracyData.length > 0 && (
                       <div className="bg-green-50 p-4 rounded-lg border border-green-200">
                         <div className="flex items-center gap-2 mb-2">
                           <Target className="h-4 w-4 text-green-600" />
-                          <h4 className="font-semibold text-green-900">MAPE</h4>
+                          <h4 className="font-semibold text-green-900">{appliedFilters.forecastDays}-Day Forecast Accuracy</h4>
                         </div>
                         <p className="text-2xl font-bold text-green-700">
-                          {accuracyData[0]?.mape?.toFixed(2) || 'N/A'}%
+                          {accuracyData[0]?.mape ? (100 - accuracyData[0].mape).toFixed(2) : 'N/A'}%
                         </p>
-                        <p className="text-xs text-green-600">Mean Absolute Percentage Error</p>
+                        <p className="text-xs text-green-600">Calculated by Mean Absolute Percentage Error</p>
                       </div>
                     )}
 
-                    {/* Exact Matches (MAPE < 1%) */}
-                    {performanceMetrics && (
-                      <div className="bg-purple-50 p-4 rounded-lg border border-purple-200">
-                        <div className="flex items-center gap-2 mb-2">
+                    {/* Error Distribution Chart */}
+                    {filteredHistoryData.length > 0 && (
+                      <div className="bg-purple-50 p-4 rounded-lg border border-purple-200 col-span-2">
+                        <div className="flex items-center gap-2 mb-3">
                           <Target className="h-4 w-4 text-purple-600" />
-                          <h4 className="font-semibold text-purple-900">Accuracy</h4>
+                          <h4 className="font-semibold text-purple-900">Forecast Error Distribution</h4>
                         </div>
-                        <p className="text-2xl font-bold text-purple-700">
-                          {performanceMetrics.exactMatches}/{performanceMetrics.totalForecasts}
-                        </p>
-                        <div className="space-y-1">
-                          <p className="text-xs text-purple-600">
-                            {performanceMetrics.exactMatchRate.toFixed(1)}% Accuracy
-                          </p>
-                          <p className="text-[10px] text-purple-500">
-                            (Forecasts with MAPE under 1%)
-                          </p>
+                        <div className="space-y-2">
+                          {(() => {
+                            // Calculate percentage errors for distribution
+                            const errors = filteredHistoryData.map(forecast => 
+                              ((forecast.predicted_value - forecast.current_value) / forecast.current_value) * 100
+                            );
+                            
+                            // Create bins for histogram
+                            const minError = Math.min(...errors);
+                            const maxError = Math.max(...errors);
+                            const range = maxError - minError;
+                            const binCount = Math.min(10, Math.max(5, Math.floor(errors.length / 5))); // 5-10 bins depending on data size
+                            const binWidth = range / binCount;
+                            
+                            const bins = Array.from({ length: binCount }, (_, i) => ({
+                              min: minError + i * binWidth,
+                              max: minError + (i + 1) * binWidth,
+                              count: 0
+                            }));
+                            
+                            // Count errors in each bin
+                            errors.forEach(error => {
+                              const binIndex = Math.min(Math.floor((error - minError) / binWidth), binCount - 1);
+                              bins[binIndex].count++;
+                            });
+                            
+                            const maxCount = Math.max(...bins.map(bin => bin.count));
+                            
+                            return (
+                              <div className="space-y-1">
+                                <div className="flex justify-between text-xs text-purple-600 mb-1">
+                                  <span>Error Range: {minError.toFixed(1)}% to {maxError.toFixed(1)}%</span>
+                                  <span>Total: {errors.length} forecasts</span>
+                                </div>
+                                <div className="grid grid-cols-10 gap-px h-16 bg-purple-100 rounded">
+                                  {bins.map((bin, index) => (
+                                    <div
+                                      key={index}
+                                      className="bg-purple-400 hover:bg-purple-500 transition-colors relative group flex items-end"
+                                      style={{
+                                        height: `${maxCount > 0 ? (bin.count / maxCount) * 100 : 0}%`,
+                                        minHeight: bin.count > 0 ? '2px' : '0px'
+                                      }}
+                                      title={`${bin.min.toFixed(1)}% to ${bin.max.toFixed(1)}%: ${bin.count} forecasts`}
+                                    >
+                                      <div className="absolute -top-8 left-1/2 transform -translate-x-1/2 bg-gray-800 text-white text-xs px-2 py-1 rounded opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap z-10">
+                                        {bin.min.toFixed(1)}% to {bin.max.toFixed(1)}%<br/>
+                                        Count: {bin.count}
+                                      </div>
+                                    </div>
+                                  ))}
+                                </div>
+                                <div className="flex justify-between text-xs text-purple-600">
+                                  <span>{minError.toFixed(1)}%</span>
+                                  <span>0%</span>
+                                  <span>{maxError.toFixed(1)}%</span>
+                                </div>
+                              </div>
+                            );
+                          })()}
                         </div>
                       </div>
                     )}
 
-                    {/* Confidence Band Coverage */}
-                    {performanceMetrics && performanceMetrics.hasConfidenceIntervals && (
-                      <div className="bg-orange-50 p-4 rounded-lg border border-orange-200">
-                        <div className="flex items-center gap-2 mb-2">
-                          <Target className="h-4 w-4 text-orange-600" />
-                          <h4 className="font-semibold text-orange-900">Coverage</h4>
-                        </div>
-                        <p className="text-2xl font-bold text-orange-700">
-                          {performanceMetrics.withinConfidenceBand}/{performanceMetrics.totalForecasts}
-                        </p>
-                        <p className="text-xs text-orange-600">
-                          Forecasts within 90% confidence band
-                        </p>
-                      </div>
-                    )}
-
-                    {/* No confidence intervals message */}
-                    {performanceMetrics && !performanceMetrics.hasConfidenceIntervals && (
-                      <div className="bg-gray-50 p-4 rounded-lg border border-gray-200">
-                        <div className="flex items-center gap-2 mb-2">
-                          <Target className="h-4 w-4 text-gray-600" />
-                          <h4 className="font-semibold text-gray-900">Coverage</h4>
-                        </div>
-                        <p className="text-sm text-gray-700">N/A</p>
-                        <p className="text-xs text-gray-600">No confidence intervals available</p>
-                      </div>
-                    )}
                   </div>
                 )}
                 
