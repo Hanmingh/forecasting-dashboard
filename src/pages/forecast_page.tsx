@@ -270,7 +270,7 @@ const ForecastPage = () => {
                         for (let i = 0; i <= steps; i++) {
                           const value = range - (2 * range * i) / steps;
                           yAxisLabels.push(
-                            <span key={i} className="text-xs text-muted-foreground" style={{ fontSize: '9px' }}>
+                            <span key={i} className="text-xs text-muted-foreground" style={{ fontSize: '12px' }}>
                               {value >= 0 ? '+' : ''}{value.toFixed(1)}%
                             </span>
                           );
@@ -304,46 +304,48 @@ const ForecastPage = () => {
                         />
                       </div>
                       
-                      {/* Time series line */}
+                      {/* Time series bar chart */}
                       <div className="absolute inset-0">
                         <svg className="w-full h-full">
-                          <polyline
-                            fill="none"
-                            stroke="rgb(59, 130, 246)"
-                            strokeWidth="1.5"
-                            points={forecastTimeSeries.map((item, index) => {
-                              const changes = forecastTimeSeries.map(d => d.avgChange);
-                              const maxChange = Math.max(...changes);
-                              const minChange = Math.min(...changes);
-                              const range = Math.max(Math.abs(maxChange), Math.abs(minChange));
-                              
-                              const x = (index / (forecastTimeSeries.length - 1)) * 100;
-                              const normalizedY = range > 0 ? ((range - item.avgChange) / (2 * range)) * 100 : 50;
-                              const y = Math.max(0, Math.min(100, normalizedY));
-                              
-                              return `${x}%,${y}%`;
-                            }).join(' ')}
-                          />
-                          {/* Data points */}
+                          {/* Bar chart */}
                           {forecastTimeSeries.map((item, index) => {
                             const changes = forecastTimeSeries.map(d => d.avgChange);
                             const maxChange = Math.max(...changes);
                             const minChange = Math.min(...changes);
                             const range = Math.max(Math.abs(maxChange), Math.abs(minChange));
                             
-                            const x = (index / (forecastTimeSeries.length - 1)) * 100;
-                            const normalizedY = range > 0 ? ((range - item.avgChange) / (2 * range)) * 100 : 50;
-                            const y = Math.max(0, Math.min(100, normalizedY));
+                            // Calculate bar position and size
+                            const barWidth = 100 / forecastTimeSeries.length * 0.8; // 80% width for spacing
+                            const barSpacing = 100 / forecastTimeSeries.length * 0.1; // 10% spacing each side
+                            const x = (index / forecastTimeSeries.length) * 100 + barSpacing;
+                            
+                            // Calculate bar height and position
+                            const zeroLine = 50; // 50% is the zero line
+                            let barHeight, barY;
+                            
+                            if (item.avgChange >= 0) {
+                              // Positive change: bar goes up from zero line
+                              const normalizedHeight = range > 0 ? (item.avgChange / range) * 50 : 0;
+                              barHeight = normalizedHeight;
+                              barY = zeroLine - normalizedHeight;
+                            } else {
+                              // Negative change: bar goes down from zero line
+                              const normalizedHeight = range > 0 ? (Math.abs(item.avgChange) / range) * 50 : 0;
+                              barHeight = normalizedHeight;
+                              barY = zeroLine;
+                            }
                             
                             return (
-                              <circle
+                              <rect
                                 key={index}
-                                cx={`${x}%`}
-                                cy={`${y}%`}
-                                r="2"
+                                x={`${x}%`}
+                                y={`${barY}%`}
+                                width={`${barWidth}%`}
+                                height={`${barHeight}%`}
                                 fill={item.avgChange >= 0 ? getUpColorHex() : getDownColorHex()}
-                                stroke="white"
-                                strokeWidth="1"
+                                fillOpacity="0.8"
+                                stroke={item.avgChange >= 0 ? getUpColorHex() : getDownColorHex()}
+                                strokeWidth="0.5"
                               />
                             );
                           })}
@@ -358,9 +360,9 @@ const ForecastPage = () => {
                   <div className="flex ml-12 mt-1">
                     {forecastTimeSeries.map((item, index) => (
                       <div key={index} className="flex flex-col items-center flex-1">
-                        <span className="text-xs text-center" style={{ fontSize: '8px' }}>
+                        <span className="text-xs text-center" style={{ fontSize: '11px' }}>
                           {index % Math.max(1, Math.floor(forecastTimeSeries.length / 5)) === 0 ? 
-                            new Date(item.date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) : 
+                            new Date(item.date).toLocaleDateString('en-US', { month: '2-digit', year: 'numeric' }) : 
                             ''
                           }
                         </span>

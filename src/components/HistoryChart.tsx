@@ -200,7 +200,6 @@ const HistoryChart: React.FC<HistoryChartProps> = ({
             type="monotone" 
             strokeWidth={2} 
             stroke="#10b981" 
-            strokeDasharray="5 5"
             dot={false}
           />
 
@@ -211,6 +210,7 @@ const HistoryChart: React.FC<HistoryChartProps> = ({
             type="monotone" 
             strokeWidth={3} 
             stroke="#f59e0b" 
+            strokeDasharray="5 5"
             dot={false}
             activeDot={false}
           />
