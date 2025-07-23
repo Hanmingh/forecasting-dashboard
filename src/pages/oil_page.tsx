@@ -192,63 +192,6 @@ const OilPage = () => {
           </CardContent>
         </Card>
       </div>
-      
-      {/* Additional Forecast Charts */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-        {/* 1-Day Forecast */}
-        <Card>
-          <CardHeader>
-            <CardTitle>1-Day Forecast</CardTitle>
-            <CardDescription>
-              Tomorrow's price prediction
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            <PredictionChart 
-              data={latestForecasts.filter(f => f.n_days_ahead <= 1)} 
-              accuracy={accuracyData}
-              currentValue={currentValue}
-              currentDate={latestDate}
-            />
-          </CardContent>
-        </Card>
-
-        {/* 5-Day Forecast */}
-        <Card>
-          <CardHeader>
-            <CardTitle>5-Day Forecast</CardTitle>
-            <CardDescription>
-              Short-term price trend
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            <PredictionChart 
-              data={latestForecasts.filter(f => f.n_days_ahead <= 5)} 
-              accuracy={accuracyData}
-              currentValue={currentValue}
-              currentDate={latestDate}
-            />
-          </CardContent>
-        </Card>
-
-        {/* 30-Day Forecast */}
-        <Card>
-          <CardHeader>
-            <CardTitle>30-Day Forecast</CardTitle>
-            <CardDescription>
-              Medium-term price outlook
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            <PredictionChart 
-              data={latestForecasts.filter(f => f.n_days_ahead <= 30)} 
-              accuracy={accuracyData}
-              currentValue={currentValue}
-              currentDate={latestDate}
-            />
-          </CardContent>
-        </Card>
-      </div>
 
       {/* Chart */}
       <Card>
@@ -282,7 +225,7 @@ const OilPage = () => {
                   <TableHead className="sticky left-0 bg-background border-r">Metric</TableHead>
                   {latestForecasts.map((forecast) => (
                     <TableHead key={forecast.n_days_ahead} className="text-center min-w-[120px]">
-                      {forecast.n_days_ahead} days
+                      {forecast.n_days_ahead}-Day
                     </TableHead>
                   ))}
                 </TableRow>

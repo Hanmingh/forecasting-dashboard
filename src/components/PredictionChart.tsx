@@ -147,11 +147,12 @@ const PredictionChart: React.FC<PredictionChartProps> = ({
           fontSize={12} 
           tickLine={false} 
           axisLine={false}
-          interval="preserveStartEnd"
+          interval={Math.ceil(chartData.length / 8)} // Show approximately 8 ticks across the chart
           tick={{ fontSize: 11 }}
           tickFormatter={(value) => {
             const date = new Date(value);
-            return `${date.getMonth() + 1}/${date.getDate()}`;
+            // Show MM/DD/YY format for better readability with year
+            return `${(date.getMonth() + 1).toString().padStart(2, '0')}/${date.getDate().toString().padStart(2, '0')}/${date.getFullYear().toString().slice(-2)}`;
           }}
         />
         
