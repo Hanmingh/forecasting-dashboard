@@ -4,38 +4,43 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
-import { Search, Ship, MapPin, Clock, Navigation, PlusCircle, Edit } from 'lucide-react';
+import { Ship, MapPin, PlusCircle, Edit } from 'lucide-react';
 import VesselFinderMap from '../components/VesselFinderMap';
-
-interface VesselInfo {
-  imo: string;
-  name: string;
-  type: string;
-  flag: string;
-  built: string;
-  status: string;
-}
+import { useVessel } from '@/hooks/use-vessel';
+import type { VesselResponse, VesselCreate } from '@/hooks/types';
 
 const VesselTrackingPage: React.FC = () => {
   const [selectedIMO, setSelectedIMO] = useState<string>('');
-  const [savedVessels, setSavedVessels] = useState<VesselInfo[]>([]);
+  const [savedVessels, setSavedVessels] = useState<VesselResponse[]>([]);
   const [showAddForm, setShowAddForm] = useState<boolean>(false);
-  const [editingVessel, setEditingVessel] = useState<VesselInfo | null>(null);
-  const [vesselForm, setVesselForm] = useState<VesselInfo>({
-    imo: '',
-    name: '',
-    type: '',
-    flag: '',
-    built: '',
-    status: 'Active'
+  const [editingVessel, setEditingVessel] = useState<VesselResponse | null>(null);
+  const [vesselForm, setVesselForm] = useState<VesselCreate>({
+    imo_number: '',
+    vessel_name: '',
+    notes: ''
   });
+  
+  // Vessel management hooks
+  const { addVessel, fetchVessels, modifyVessel, removeVessel, loading } = useVessel();
+  
   const [mapCenter, setMapCenter] = useState({
     latitude: 25.0,
     longitude: 55.0,
     zoom: 3
   });
 
-
+  // Load vessels on component mount
+  useEffect(() => {
+    const loadVessels = async () => {
+      try {
+        const vessels = await fetchVessels();
+        setSavedVessels(vessels || []);
+      } catch (error) {
+        console.error('Error loading vessels:', error);
+      }
+    };
+    loadVessels();
+  }, []);
 
   // Maritime regions for quick navigation
   const regions = [
@@ -47,62 +52,57 @@ const VesselTrackingPage: React.FC = () => {
     { name: 'Global View', lat: 25.0, lon: 55.0, zoom: 3 },
   ];
 
-
-
-
-
   const handleAddVessel = () => {
     setShowAddForm(true);
     setEditingVessel(null);
     setVesselForm({
-      imo: '',
-      name: '',
-      type: '',
-      flag: '',
-      built: '',
-      status: 'Active'
+      imo_number: '',
+      vessel_name: '',
+      notes: ''
     });
   };
 
-  const handleEditVessel = (vessel: VesselInfo) => {
+  const handleEditVessel = (vessel: VesselResponse) => {
     setShowAddForm(true);
     setEditingVessel(vessel);
-    setVesselForm(vessel);
+    setVesselForm({
+      imo_number: vessel.imo_number,
+      vessel_name: vessel.vessel_name || '',
+      notes: vessel.notes || ''
+    });
   };
 
-    const handleFormSubmit = (e: React.FormEvent) => {
+  const handleFormSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (vesselForm.imo.trim()) {
-      if (editingVessel) {
-        // Update existing vessel
-        setSavedVessels(prev => 
-          prev.map(v => v.imo === editingVessel.imo ? vesselForm : v)
-        );
-      } else {
-        // Add new vessel with IMO only, generate default info
-        if (!savedVessels.some(v => v.imo === vesselForm.imo)) {
-          const newVessel: VesselInfo = {
-            imo: vesselForm.imo.trim(),
-            name: vesselForm.name.trim() || `Vessel ${vesselForm.imo.trim()}`,
-            type: vesselForm.type.trim() || 'Cargo Ship',
-            flag: vesselForm.flag.trim() || 'Unknown',
-            built: vesselForm.built.trim() || '2020',
-            status: vesselForm.status || 'Active'
-          };
-          setSavedVessels(prev => [...prev, newVessel]);
+    if (vesselForm.imo_number.trim()) {
+      try {
+        if (editingVessel) {
+          // Update existing vessel
+          const updatedVessel = await modifyVessel(editingVessel.id, vesselForm);
+          if (updatedVessel) {
+            setSavedVessels(prev => 
+              prev.map(v => v.id === editingVessel.id ? updatedVessel : v)
+            );
+          }
+        } else {
+          // Add new vessel
+          const newVessel = await addVessel(vesselForm);
+          if (newVessel) {
+            setSavedVessels(prev => [...prev, newVessel]);
+          }
         }
+        
+        setShowAddForm(false);
+        setEditingVessel(null);
+        setVesselForm({
+          imo_number: '',
+          vessel_name: '',
+          notes: ''
+        });
+      } catch (error) {
+        console.error('Error saving vessel:', error);
+        // You could add a toast notification here
       }
-      
-      setShowAddForm(false);
-      setEditingVessel(null);
-      setVesselForm({
-        imo: '',
-        name: '',
-        type: '',
-        flag: '',
-        built: '',
-        status: 'Active'
-      });
     }
   };
 
@@ -110,23 +110,29 @@ const VesselTrackingPage: React.FC = () => {
     setShowAddForm(false);
     setEditingVessel(null);
     setVesselForm({
-      imo: '',
-      name: '',
-      type: '',
-      flag: '',
-      built: '',
-      status: 'Active'
+      imo_number: '',
+      vessel_name: '',
+      notes: ''
     });
   };
 
-  const handleVesselSelect = (vessel: VesselInfo) => {
-    setSelectedIMO(vessel.imo);
+  const handleVesselSelect = (vessel: VesselResponse) => {
+    setSelectedIMO(vessel.imo_number);
   };
 
-  const handleRemoveVessel = (imoToRemove: string) => {
-    setSavedVessels(prev => prev.filter(v => v.imo !== imoToRemove));
-    if (selectedIMO === imoToRemove) {
-      setSelectedIMO('');
+  const handleRemoveVessel = async (vesselId: number) => {
+    try {
+      const success = await removeVessel(vesselId);
+      if (success) {
+        setSavedVessels(prev => prev.filter(v => v.id !== vesselId));
+        // Clear selection if the removed vessel was selected
+        const removedVessel = savedVessels.find(v => v.id === vesselId);
+        if (removedVessel && selectedIMO === removedVessel.imo_number) {
+          setSelectedIMO('');
+        }
+      }
+    } catch (error) {
+      console.error('Error removing vessel:', error);
     }
   };
 
@@ -142,8 +148,6 @@ const VesselTrackingPage: React.FC = () => {
     setSelectedIMO('');
   };
 
-
-
   return (
     <div className="space-y-6">
       {/* Vessels Card */}
@@ -156,16 +160,17 @@ const VesselTrackingPage: React.FC = () => {
         </CardHeader>
         <CardContent className="space-y-4">
           {/* Add Vessel */}
-      <div className="flex justify-between items-center">
-        <div>
+          <div className="flex justify-between items-center">
+            <div>
               <h3 className="text-lg font-semibold text-[#4670bc]">Your Vessels</h3>
               <p className="text-sm text-gray-600">Add and manage your vessel tracking list</p>
-        </div>
+            </div>
             <div className="flex gap-2">
-        <Button
+              <Button
                 onClick={handleAddVessel}
-          className="bg-gradient-to-r from-[#61adde] to-[#4670bc]"
-        >
+                className="bg-gradient-to-r from-[#61adde] to-[#4670bc]"
+                disabled={loading}
+              >
                 <PlusCircle className="h-4 w-4 mr-2" />
                 Add Vessel
               </Button>
@@ -175,11 +180,11 @@ const VesselTrackingPage: React.FC = () => {
                 disabled={!selectedIMO}
               >
                 Clear Selection
-        </Button>
+              </Button>
             </div>
-      </div>
+          </div>
 
-                    {/* Add/Edit Vessel Form */}
+          {/* Add/Edit Vessel Form */}
           {showAddForm && (
             <div className="p-4 border rounded-lg bg-gray-50">
               <h3 className="font-semibold text-[#4670bc] mb-4">
@@ -193,8 +198,8 @@ const VesselTrackingPage: React.FC = () => {
                       <Label htmlFor="vessel-imo">IMO Number</Label>
                       <Input
                         id="vessel-imo"
-                        value={vesselForm.imo}
-                        onChange={(e) => setVesselForm(prev => ({ ...prev, imo: e.target.value }))}
+                        value={vesselForm.imo_number}
+                        onChange={(e) => setVesselForm(prev => ({ ...prev, imo_number: e.target.value }))}
                         placeholder="9506291"
                         disabled
                       />
@@ -203,57 +208,30 @@ const VesselTrackingPage: React.FC = () => {
                       <Label htmlFor="vessel-name">Vessel Name</Label>
                       <Input
                         id="vessel-name"
-                        value={vesselForm.name}
-                        onChange={(e) => setVesselForm(prev => ({ ...prev, name: e.target.value }))}
+                        value={vesselForm.vessel_name || ''}
+                        onChange={(e) => setVesselForm(prev => ({ ...prev, vessel_name: e.target.value || null }))}
                         placeholder="Ever Given"
                       />
                     </div>
-                    <div>
-                      <Label htmlFor="vessel-type">Type</Label>
+                    <div className="md:col-span-2">
+                      <Label htmlFor="vessel-notes">Notes</Label>
                       <Input
-                        id="vessel-type"
-                        value={vesselForm.type}
-                        onChange={(e) => setVesselForm(prev => ({ ...prev, type: e.target.value }))}
-                        placeholder="Container Ship"
-                      />
-                    </div>
-                    <div>
-                      <Label htmlFor="vessel-flag">Flag</Label>
-                      <Input
-                        id="vessel-flag"
-                        value={vesselForm.flag}
-                        onChange={(e) => setVesselForm(prev => ({ ...prev, flag: e.target.value }))}
-                        placeholder="Panama"
-                      />
-                    </div>
-                    <div>
-                      <Label htmlFor="vessel-built">Built Year</Label>
-                      <Input
-                        id="vessel-built"
-                        value={vesselForm.built}
-                        onChange={(e) => setVesselForm(prev => ({ ...prev, built: e.target.value }))}
-                        placeholder="2018"
-                      />
-                    </div>
-                    <div>
-                      <Label htmlFor="vessel-status">Status</Label>
-                      <Input
-                        id="vessel-status"
-                        value={vesselForm.status}
-                        onChange={(e) => setVesselForm(prev => ({ ...prev, status: e.target.value }))}
-                        placeholder="Active"
+                        id="vessel-notes"
+                        value={vesselForm.notes || ''}
+                        onChange={(e) => setVesselForm(prev => ({ ...prev, notes: e.target.value || null }))}
+                        placeholder="Additional notes about this vessel"
                       />
                     </div>
                   </div>
                 ) : (
-                  // Add mode - only IMO field
+                  // Add mode - only IMO field initially
                   <div className="max-w-md">
                     <div>
                       <Label htmlFor="vessel-imo">IMO Number</Label>
                       <Input
                         id="vessel-imo"
-                        value={vesselForm.imo}
-                        onChange={(e) => setVesselForm(prev => ({ ...prev, imo: e.target.value }))}
+                        value={vesselForm.imo_number}
+                        onChange={(e) => setVesselForm(prev => ({ ...prev, imo_number: e.target.value }))}
                         placeholder="Enter IMO number (e.g., 9506291)"
                         required
                         className="mt-1"
@@ -268,7 +246,7 @@ const VesselTrackingPage: React.FC = () => {
                   <Button 
                     type="submit"
                     className="bg-gradient-to-r from-[#61adde] to-[#4670bc]"
-                    disabled={!vesselForm.imo.trim()}
+                    disabled={!vesselForm.imo_number.trim() || loading}
                   >
                     {editingVessel ? 'Update Vessel' : 'Add Vessel'}
                   </Button>
@@ -305,60 +283,58 @@ const VesselTrackingPage: React.FC = () => {
               <Label className="text-sm font-medium mb-2 block">Your Vessels ({savedVessels.length}):</Label>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                 {savedVessels.map((vessel) => (
-                                    <div
-                    key={vessel.imo}
+                  <div
+                    key={vessel.id}
                     className={`p-3 border rounded-lg cursor-pointer transition-all hover:shadow-md ${
-                      selectedIMO === vessel.imo ? 'border-[#61adde] bg-blue-50 shadow-md' : 'border-gray-200 hover:border-gray-300'
+                      selectedIMO === vessel.imo_number ? 'border-[#61adde] bg-blue-50 shadow-md' : 'border-gray-200 hover:border-gray-300'
                     }`}
                     onClick={() => handleVesselSelect(vessel)}
                   >
-                                        <div className="flex justify-between items-start">
+                    <div className="flex justify-between items-start">
                       <div className="flex-1">
                         <div className="flex items-center gap-2">
-                          <div className="font-semibold text-[#4670bc] text-sm">{vessel.name}</div>
-                          {selectedIMO === vessel.imo && (
+                          <div className="font-semibold text-[#4670bc] text-sm">
+                            {vessel.vessel_name || `Vessel ${vessel.imo_number}`}
+                          </div>
+                          {selectedIMO === vessel.imo_number && (
                             <Badge className="bg-[#61adde] text-white text-xs px-2 py-0.5">
                               Tracking
                             </Badge>
                           )}
                         </div>
-                        <div className="text-xs text-gray-600 mb-1">IMO: {vessel.imo}</div>
-                        <div className="space-y-0.5">
-                          <div className="text-xs text-gray-500">
-                            <span className="font-medium">Type:</span> {vessel.type}
-                          </div>
-                          <div className="text-xs text-gray-500">
-                            <span className="font-medium">Flag:</span> {vessel.flag}
-                          </div>
-                          <div className="text-xs text-gray-500">
-                            <span className="font-medium">Built:</span> {vessel.built} | <span className="font-medium">Status:</span> {vessel.status}
-                          </div>
+                        <div className="text-xs text-gray-600 mb-1">IMO: {vessel.imo_number}</div>
+                        {vessel.notes && (
+                          <div className="text-xs text-gray-500 mt-1">{vessel.notes}</div>
+                        )}
+                        <div className="text-xs text-gray-400 mt-1">
+                          Added: {new Date(vessel.created_at).toLocaleDateString()}
                         </div>
                       </div>
-                    <div className="flex gap-1">
-                      <Button
-                        onClick={(e) => {
-                          e.stopPropagation();
+                      <div className="flex gap-1">
+                        <Button
+                          onClick={(e) => {
+                            e.stopPropagation();
                             handleEditVessel(vessel);
-                        }}
+                          }}
                           variant="outline"
-                        size="sm"
+                          size="sm"
                           className="text-xs py-1 px-2"
-                      >
+                        >
                           <Edit className="h-3 w-3 mr-1" />
-                        Edit
-                      </Button>
-                      <Button
-                        onClick={(e) => {
-                          e.stopPropagation();
-                            handleRemoveVessel(vessel.imo);
-                        }}
+                          Edit
+                        </Button>
+                        <Button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleRemoveVessel(vessel.id);
+                          }}
                           variant="outline"
-                        size="sm"
+                          size="sm"
                           className="text-xs py-1 px-2"
-                      >
+                          disabled={loading}
+                        >
                           Remove
-                      </Button>
+                        </Button>
                       </div>
                     </div>
                   </div>
@@ -372,16 +348,12 @@ const VesselTrackingPage: React.FC = () => {
               <p className="text-gray-400 text-xs">Click "Add Vessel" to start tracking your first vessel</p>
             </div>
           )}
-          </CardContent>
-        </Card>
-
-
-
-
+        </CardContent>
+      </Card>
 
       {/* Map */}
-        <Card>
-          <CardHeader>
+      <Card>
+        <CardHeader>
           <CardTitle className="flex items-center gap-2 text-[#61adde]">
             <MapPin className="h-5 w-5" />
             Live Vessel Map
@@ -391,8 +363,8 @@ const VesselTrackingPage: React.FC = () => {
               </Badge>
             )}
           </CardTitle>
-          </CardHeader>
-          <CardContent>
+        </CardHeader>
+        <CardContent>
           {/* Quick Navigation */}
           <div className="mb-4 p-4 bg-gray-50 rounded-lg">
             <div className="flex items-center gap-2 mb-3">
@@ -410,9 +382,9 @@ const VesselTrackingPage: React.FC = () => {
                 >
                   {region.name}
                 </Button>
-                  ))}
+              ))}
             </div>
-            </div>
+          </div>
 
           <VesselFinderMap 
             width="100%" 
@@ -427,14 +399,13 @@ const VesselTrackingPage: React.FC = () => {
           <div className="mt-4 text-sm text-gray-600">
             <div className="flex items-center gap-4">
               <div className="flex items-center gap-2">
-                <Clock className="h-4 w-4" />
                 <span>Real-time AIS data</span>
-            </div>
-            <div>
+              </div>
+              <div>
                 Current view: {mapCenter.latitude.toFixed(2)}, {mapCenter.longitude.toFixed(2)} (Zoom: {mapCenter.zoom})
-                  </div>
+              </div>
             </div>
-                    </div>
+          </div>
         </CardContent>
       </Card>
     </div>

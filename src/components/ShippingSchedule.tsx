@@ -51,17 +51,17 @@ const ShippingSchedule: React.FC<ShippingScheduleProps> = ({
                   <div>
                     <div className="font-medium text-sm">
                       {vessel.vessel_name || `Vessel ${vessel.imo_number}`}
-                    </div>
+            </div>
                     <div className="text-xs text-gray-500">
                       IMO: {vessel.imo_number}
-                    </div>
+              </div>
                     {vessel.notes && (
                       <div className="text-xs text-gray-400 mt-1">
                         {vessel.notes}
-                      </div>
+              </div>
                     )}
-                  </div>
-                </div>
+              </div>
+            </div>
                 <div className="flex items-center gap-2">
                   <Badge variant="outline" className="text-xs">
                     Added {new Date(vessel.created_at).toLocaleDateString()}
@@ -69,8 +69,8 @@ const ShippingSchedule: React.FC<ShippingScheduleProps> = ({
                 </div>
               </div>
             ))}
-          </div>
-        )}
+                          </div>
+                        )}
       </CardContent>
     </Card>
   );
