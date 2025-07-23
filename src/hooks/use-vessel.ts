@@ -9,7 +9,6 @@ export function useVessel() {
   const fetchVessels = async (params?: {
     skip?: number;
     limit?: number;
-    vessel_type?: string;
   }) => {
     setLoading(true);
     setError(null);

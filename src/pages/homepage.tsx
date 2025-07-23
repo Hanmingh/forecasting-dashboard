@@ -7,12 +7,10 @@ import {
 import { Button } from "@/components/ui/button";
 import { useMultiForecast } from "@/hooks/use-forecasts";
 import { useColorPreferences } from "@/hooks/use-color-preferences";
-import { useRoute } from "@/hooks/use-route";
 import { useVessel } from "@/hooks/use-vessel";
-import { usePort } from "@/hooks/use-port";
 import { useState, useEffect, useMemo } from "react";
 import { Star, TrendingUp, TrendingDown } from "lucide-react";
-import type { Forecast, RouteResponse, VesselResponse, PortResponse } from "@/hooks/types";
+import type { Forecast, VesselResponse } from "@/hooks/types";
 import ShippingSchedule from "@/components/ShippingSchedule";
 
 interface FavoriteProduct {
@@ -22,9 +20,7 @@ interface FavoriteProduct {
 
 const Homepage = () => {
   const [favorites, setFavorites] = useState<FavoriteProduct[]>([]);
-  const [routes, setRoutes] = useState<RouteResponse[]>([]);
   const [vessels, setVessels] = useState<VesselResponse[]>([]);
-  const [ports, setPorts] = useState<PortResponse[]>([]);
   const { getUpColor, getDownColor } = useColorPreferences();
 
   // Define forecast horizons
@@ -83,28 +79,20 @@ const Homepage = () => {
   // Check if forecasts are loading
   const isForecastsLoading = forecastResults.some(result => result.isLoading);
 
-  // Fetch routes, vessels, and ports data
-  const { fetchRoutes } = useRoute();
+  // Fetch vessels data
   const { fetchVessels } = useVessel();
-  const { fetchPorts } = usePort();
 
   useEffect(() => {
-    const loadShippingData = async () => {
+    const loadVesselsData = async () => {
       try {
-        const [routesData, vesselsData, portsData] = await Promise.all([
-          fetchRoutes(),
-          fetchVessels(),
-          fetchPorts()
-        ]);
-        setRoutes(routesData || []);
+        const vesselsData = await fetchVessels();
         setVessels(vesselsData || []);
-        setPorts(portsData || []);
       } catch (error) {
-        console.error('Error loading shipping data:', error);
+        console.error('Error loading vessels data:', error);
       }
     };
 
-    loadShippingData();
+    loadVesselsData();
   }, []);
 
   const removeFromFavorites = (product: string) => {
@@ -237,13 +225,13 @@ const Homepage = () => {
         </Card>
       )}
 
-      {/* Shipping Schedule Section */}
+      {/* User Fleet Section */}
       <ShippingSchedule
-        routes={routes}
+        routes={[]}
         vessels={vessels}
-        ports={ports}
-        title="Shipping Schedule"
-        subtitle={`${routes.length} routes in system`}
+        ports={[]}
+        title="My Fleet"
+        subtitle={`${vessels.length} vessels in your fleet`}
         showControls={true}
         compact={false}
       />

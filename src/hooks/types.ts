@@ -22,46 +22,16 @@ export interface Accuracy {
 }
 
 export interface VesselBase {
-  vessel_name: string;
-  vessel_type: string;
+  imo_number: string;
+  vessel_name?: string | null;
+  notes?: string | null;
 }
 
 export interface VesselCreate extends VesselBase {}
 
 export interface VesselResponse extends VesselBase {
   id: number;
-}
-
-// Types for Routes
-export interface RouteBase {
-  vessel_id: number;
-  departure_port_id: number;
-  arrival_port_id: number;
-  scheduled_departure: string; // ISO datetime string
-  actual_departure?: string | null;
-  estimated_arrival: string; // ISO datetime string
-  actual_arrival?: string | null;
-  current_latitude?: number | null;
-  current_longitude?: number | null;
-}
-
-export interface RouteCreate extends RouteBase {}
-
-export interface RouteResponse extends RouteBase {
-  id: number;
-}
-
-export interface PortResponse {
-  id: number;
-  port_code: string;
-  port_name: string;
-  country: string;
-  city: string;
-  latitude: number;
-  longitude: number;
-  timezone: string;
-  port_type: string;
-  is_active: boolean;
+  created_at: string;
 }
 
 export interface OilIndicesResponse {
